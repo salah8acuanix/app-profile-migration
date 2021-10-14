@@ -1,0 +1,15 @@
+package com.airgap.approfiling.dao;
+
+import java.util.List;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import com.airgap.approfiling.model.RecoveryTemplate;
+
+@Repository
+public interface RecoveryTemplateRepository extends CrudRepository<RecoveryTemplate, Integer> {
+
+	List<RecoveryTemplate> findByServerVendorAndServerTypeAndServerVersion(Integer serverVendor, Integer serverType, Integer serverVersion);
+	
+}

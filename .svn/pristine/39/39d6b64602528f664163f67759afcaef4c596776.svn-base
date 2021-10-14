@@ -1,0 +1,29 @@
+package com.airgap.approfiling.service;
+
+
+
+
+import com.airgap.common.dto.ClientImportPlanDto;
+
+import java.util.List;
+
+public interface IClientImportPlanService {
+    List<ClientImportPlanDto> listAll();
+    ClientImportPlanDto save(ClientImportPlanDto dto);
+    boolean delete(int id);
+    ClientImportPlanDto findById(Integer id);
+    boolean deleteAll(List<ClientImportPlanDto> dtos);
+    List<ClientImportPlanDto> listAllByActive();
+    void run(ClientImportPlanDto byId);
+    boolean updatePlanStatus(Integer planId, Integer status);
+
+    ClientImportPlanDto findClientPlanByServerId(Integer serverId);
+
+    boolean activateOrDeactivate(List<ClientImportPlanDto> dtos, Integer status);
+
+    boolean deleteByBackupServer(Integer serverId);
+
+    List<ClientImportPlanDto> clientImportPlanByScheduledTaskAndScheduledTaskEnabled(Integer sceduledTaskId);
+    List<ClientImportPlanDto> clientImportPlanByAirgapWorkflow(Integer wfId);
+    boolean updatePlanTrainStatus(Integer planId, Boolean trained);
+}

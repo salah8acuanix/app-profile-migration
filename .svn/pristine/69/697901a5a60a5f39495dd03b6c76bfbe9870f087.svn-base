@@ -1,0 +1,89 @@
+package com.airgap.approfiling.controller;
+
+
+import com.airgap.approfiling.service.ITestClientImportService;
+import com.airgap.common.dto.TestClientImportDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class TestClientImportController {
+
+    @Autowired
+    private ITestClientImportService service;
+
+
+    @PostMapping(value="/testClientImport/save")
+    @CrossOrigin("*")
+    public TestClientImportDto save(@RequestBody @Valid TestClientImportDto dto ,@RequestHeader(name = "Authorization") String token){
+        return service.save(dto,token);
+    }
+
+    @PostMapping(value="/testClientImport/{testClientImportServerId}/{testClientImportStatus}")
+    @CrossOrigin("*")
+    public boolean updatePlanStatus(@PathVariable("testClientImportServerId") Integer testClientImportServerId,
+                                    @PathVariable("testClientImportStatus") Integer testClientImportStatus){
+        return  service.updateTestClientImportStatus(testClientImportServerId,testClientImportStatus);
+    }
+
+
+    @PostMapping(value="/testClientImport/updateTrainStatus/{testClientImportServerId}")
+    public boolean updateTrainStatus(@PathVariable("testClientImportServerId") Integer testClientImportServerId,@RequestParam(name = "trained") Boolean trained){
+        return  service.updateTestClientImportTrainStatus(testClientImportServerId,trained);
+    }
+
+
+
+    @GetMapping(value="/testClientImport/all")
+    @CrossOrigin("*")
+    public List<TestClientImportDto> all(){
+        return service.listAll();
+    }
+
+
+    @GetMapping(value="/testClientImport/{serverId}")
+    @CrossOrigin("*")
+    public TestClientImportDto findById(@PathVariable("serverId") Integer serverId){
+        return service.findByBackupServer(serverId);
+    }
+
+    @GetMapping(value="/testClientImportByScheduledTask/{sceduledTaskId}")
+    @CrossOrigin("*")
+    public List<TestClientImportDto> clientImportPlanByScheduledTaskAndScheduledTaskEnabled(@PathVariable("sceduledTaskId") Integer sceduledTaskId){
+        return service.testClientImportByScheduledTaskAndScheduledTaskEnabled(sceduledTaskId);
+    }
+
+
+    @DeleteMapping(value = "/testClientImportByScheduledTask/delete/{serverId}")
+    public boolean delete(@PathVariable("serverId") Integer serverId) {
+        return service.delete(serverId);
+    }
+
+    @DeleteMapping(value = "/testClientImport/deleteByBackupServer/{serverId}")
+    public boolean deleteByBackupServer(@PathVariable("serverId") Integer serverId) {
+        return service.deleteByBackupServer(serverId);
+    }
+
+    @PostMapping(value = "/testClientImport/deleteAll")
+    public boolean deleteAll(@RequestBody List<TestClientImportDto> dtos) {
+        return service.deleteAll(dtos);
+    }
+
+    @GetMapping(value="/testClientImportByServer/{serverId}/{test}")
+    @CrossOrigin("*")
+    public TestClientImportDto findByServerId(@PathVariable("serverId") Integer serverId,@PathVariable("test") Integer test){
+        return service.findTestClientImportByServerId(serverId,test);
+    }
+
+
+    @PostMapping(value = "/testClientImportByServer/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<TestClientImportDto> dtos,
+                                        @PathVariable("status") Integer status) {
+        return service.activateOrDeactivate(dtos, status);
+    }
+
+}

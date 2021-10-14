@@ -1,0 +1,32 @@
+package com.airgap.approfiling.dao;
+
+
+import com.airgap.approfiling.model.MetadataImportPlan;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import javax.transaction.Transactional;
+import java.util.Optional;
+
+@Repository
+public interface MetadataImportPlanRepository extends CrudRepository<MetadataImportPlan,Integer> {
+    Iterable<MetadataImportPlan> findAllByActive(Integer active);
+
+    @Transactional
+    @Modifying
+    @Query(value="update client_import_plan set status =:status where backup_server =:id", nativeQuery = true)
+    void updateMetadataPlanStatus(@Param("id") Integer id, @Param("status") Integer status);
+
+
+
+    @Transactional
+    @Modifying
+    @Query(value="update metadata_import_plan set active = :status where id = :id", nativeQuery = true)
+    void activateOrDeactivate(Integer id, Integer status);
+    
+
+    Optional<MetadataImportPlan> findByBackupServer(Integer serverId);
+}

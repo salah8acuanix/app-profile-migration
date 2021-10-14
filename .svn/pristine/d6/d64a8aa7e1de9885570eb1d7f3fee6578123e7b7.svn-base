@@ -1,0 +1,223 @@
+package com.airgap.approfiling.service;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import javax.servlet.http.HttpSession;
+import javax.transaction.Transactional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryWorkflowRepository;
+import com.airgap.approfiling.dto.RecoveryWorkflowDto;
+import com.airgap.approfiling.feignClients.AuditingFeignClient;
+import com.airgap.approfiling.feignClients.UserFeignClient;
+import com.airgap.approfiling.model.RecoveryWorkflow;
+import com.airgap.common.dto.AuditLogsDto;
+import com.airgap.common.dto.MicroservicesNamesEnum;
+import com.airgap.common.dto.OperationEnum;
+import com.airgap.common.error.AbstractAirgapException;
+
+/**
+ * Author: Attia Saeed
+ * 04/01/2021
+ */
+@Service
+@Transactional
+public class RecoveryWorkflowServiceImpl implements IRecoveryWorkflowService {
+
+    @Autowired
+    public HttpSession httpSession;
+    @Autowired
+    RecoveryWorkflowRepository repo;
+    @Autowired
+    AuditingFeignClient auditingService;
+    
+    @Autowired
+    private UserFeignClient userFeignClient;
+
+    @Autowired
+    RecoveryApiCallService recoveryApiCallService;
+
+    @Override
+    public List<RecoveryWorkflowDto> listAll() {
+
+        List<RecoveryWorkflowDto> dtos = null;
+        try {
+            Iterable<RecoveryWorkflow> all = repo.findAll();
+            if (all != null) {
+                dtos = new ArrayList<>();
+                for (RecoveryWorkflow entity : all) {
+                    dtos.add(entity.toDto());
+                }
+                return dtos;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public RecoveryWorkflowDto save(RecoveryWorkflowDto dto , String token) {
+        String userName = recoveryApiCallService.getLoggedUser(token);
+
+        try {
+            RecoveryWorkflowDto recoveryWorkflowDto = null;
+            if (dto.getStatus() != 1) {
+                recoveryWorkflowDto = repo.save(dto.toEntity()).toDto();
+                try {
+                    auditingService.logAudit(
+                            new AuditLogsDto(new Date(), MicroservicesNamesEnum.APP_PROFILING.toString(), "Endpoints API Requests",
+                                    OperationEnum.SAVE.toString(), userName, "Endpoint (" + dto.getName() + ") saved"
+                            ));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                return recoveryWorkflowDto;
+            } else
+                throw new AbstractAirgapException("Cannot save Or update a running recovery workflow!");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(RecoveryWorkflowDto dto, String token) {
+        String userName = recoveryApiCallService.getLoggedUser(token);
+
+        try {
+
+            if (dto.getStatus() != 1) {
+                repo.delete(dto.toEntity());
+                try {
+                    auditingService.logAudit(
+                            new AuditLogsDto(new Date(), MicroservicesNamesEnum.APP_PROFILING.toString(), "Endpoints API Requests",
+                                    OperationEnum.DELETE.toString(), userName, "Endpoint (" + dto.getName() + ") deleted"
+                            ));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+                return true;
+            } else {
+                throw new AbstractAirgapException("Cannot delete a running recovery workflow!");
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+
+    @Override
+    public boolean deleteById(int id, String token) {
+        try {
+            if (repo.findById(id).orElseThrow().getStatus() != 1) {
+                this.repo.deleteById(id);
+                return true;
+            } else
+                throw new AbstractAirgapException("Cannot delete a running recovery workflow!");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+
+    @Override
+    public boolean deleteAll(List<RecoveryWorkflowDto> list, String token) {
+        String userName = recoveryApiCallService.getLoggedUser(token);
+        try {
+            List<RecoveryWorkflow> entities = null;
+            if (list != null && !list.isEmpty()) {
+                entities = entities == null ? new ArrayList<>() : entities;
+                for (RecoveryWorkflowDto dto : list) {
+                    entities.add(dto.toEntity());
+                    repo.deleteAll(entities);
+                    try {
+                        auditingService.logAudit(
+                                new AuditLogsDto(new Date(), MicroservicesNamesEnum.APP_PROFILING.toString(), "Endpoints API Requests",
+                                        OperationEnum.DELETE.toString(), userName, "Endpoint (" + dto.getName() + ") deleted"
+                                ));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RecoveryWorkflowDto findById(Integer id) {
+        try {
+            Optional<RecoveryWorkflow> entity = this.repo.findById(id);
+            RecoveryWorkflow recoveryWorkflow = entity.get();
+            return recoveryWorkflow.toDto();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+
+    @Override
+    public List<RecoveryWorkflowDto> findAll(int limit, int offset) {
+        List<RecoveryWorkflowDto> dtos = null;
+
+        try {
+            Iterable<RecoveryWorkflow> all = repo.findAll(getPageable(offset, limit));
+            if (all != null) {
+                dtos = new ArrayList<>();
+                for (RecoveryWorkflow entity : all) {
+                    dtos.add(entity.toDto());
+                }
+            }
+            return dtos;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+
+    }
+
+    @Override
+    public boolean updateStatusRecoveryWorkFlow(int id, Integer status) {
+        try {
+            RecoveryWorkflow recoveryWorkflow = repo.findById(id).orElseThrow();
+            recoveryWorkflow.setStatus(status);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+
+    }
+
+
+    public Pageable getPageable(int page, int size) {
+        try {
+
+            return PageRequest.of(page, size);
+        } catch (Exception e) {
+            e.getStackTrace();
+        }
+        return null;
+    }
+
+
+}

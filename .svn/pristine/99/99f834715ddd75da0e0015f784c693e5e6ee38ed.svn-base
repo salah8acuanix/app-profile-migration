@@ -1,0 +1,272 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.*;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * @author : Attia saeed
+ */
+
+public class RecoveryApiCallDto {
+
+    private Integer id;
+    private String backup;
+    private String client;
+    private String createdBy;
+    private Date createdOn;
+    private String method;
+    private String modifiedBy;
+    private Date modifiedOn;
+    private String name;
+    private boolean notifyOnComplete;
+    private boolean notifyOnError;
+    private boolean notifyOnStart;
+    private int server;
+    private String ssh;
+    private int uri;
+    private List<RecoveryApiOptionDto> recoveryApiOptionDtos;
+    private List<RecoveryApiResponseParamDto> recoveryApiResponseParamDtos;
+    private Integer recoveryTemplate;
+    private Integer recoveryProfile;
+    private boolean option;
+
+    public RecoveryApiCallDto() {
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public boolean isOption() {
+        return option;
+    }
+
+    public void setOption(boolean option) {
+        this.option = option;
+    }
+
+    public String getBackup() {
+        return backup;
+    }
+
+    public void setBackup(String backup) {
+        this.backup = backup;
+    }
+
+    public String getClient() {
+        return client;
+    }
+
+    public void setClient(String client) {
+        this.client = client;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Date getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(Date createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public String getMethod() {
+        return method;
+    }
+
+    public void setMethod(String method) {
+        this.method = method;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public Date getModifiedOn() {
+        return modifiedOn;
+    }
+
+    public void setModifiedOn(Date modifiedOn) {
+        this.modifiedOn = modifiedOn;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public boolean isNotifyOnComplete() {
+        return notifyOnComplete;
+    }
+
+    public void setNotifyOnComplete(boolean notifyOnComplete) {
+        this.notifyOnComplete = notifyOnComplete;
+    }
+
+    public boolean isNotifyOnError() {
+        return notifyOnError;
+    }
+
+    public void setNotifyOnError(boolean notifyOnError) {
+        this.notifyOnError = notifyOnError;
+    }
+
+    public boolean isNotifyOnStart() {
+        return notifyOnStart;
+    }
+
+    public void setNotifyOnStart(boolean notifyOnStart) {
+        this.notifyOnStart = notifyOnStart;
+    }
+
+    public Integer getServer() {
+        return server;
+    }
+
+    public void setServer(int server) {
+        this.server = server;
+    }
+
+    public String getSsh() {
+        return ssh;
+    }
+
+    public void setSsh(String ssh) {
+        this.ssh = ssh;
+    }
+
+    public Integer getUri() {
+        return uri;
+    }
+
+    public void setUri(int uri) {
+        this.uri = uri;
+    }
+
+
+    public List<RecoveryApiOptionDto> getRecoveryApiOptionDtos() {
+        return recoveryApiOptionDtos;
+    }
+
+    public void setRecoveryApiOptionDtos(List<RecoveryApiOptionDto> recoveryApiOptionDtos) {
+        this.recoveryApiOptionDtos = recoveryApiOptionDtos;
+    }
+
+    public List<RecoveryApiResponseParamDto> getRecoveryApiResponseParamDtos() {
+        return recoveryApiResponseParamDtos;
+    }
+
+    public void setRecoveryApiResponseParamDtos(List<RecoveryApiResponseParamDto> recoveryApiResponseParamDtos) {
+        this.recoveryApiResponseParamDtos = recoveryApiResponseParamDtos;
+    }
+
+
+    public Integer getRecoveryTemplate() {
+        return recoveryTemplate;
+    }
+
+    public void setRecoveryTemplate(Integer recoveryTemplate) {
+        this.recoveryTemplate = recoveryTemplate;
+    }
+
+    public Integer getRecoveryProfile() {
+        return recoveryProfile;
+    }
+
+    public void setRecoveryProfile(Integer recoveryProfile) {
+        this.recoveryProfile = recoveryProfile;
+    }
+
+    /**
+     * Mapping DTO obj to Entity Obj
+     *
+     * @return
+     * @author: Attia Saeed
+     */
+    public RecoveryApiCall toEntity() {
+        RecoveryApiCall entity = new RecoveryApiCall();
+        try {
+            if (getId() != null)
+                entity.setId(getId());
+            if (getBackup() != null)
+                entity.setBackup(getBackup());
+            if (getClient() != null)
+                entity.setClient(getClient());
+            if (getCreatedBy() != null)
+                entity.setCreatedBy(getCreatedBy());
+            if (getCreatedOn() != null)
+                entity.setCreatedOn(getCreatedOn());
+            if (getMethod() != null)
+                entity.setMethod(getMethod());
+            if (getModifiedBy() != null)
+                entity.setModifiedBy(getModifiedBy());
+            if (getModifiedOn() != null)
+                entity.setModifiedOn(getModifiedOn());
+            if (getName() != null)
+                entity.setName(getName());
+            if (isNotifyOnComplete())
+                entity.setNotifyOnComplete(isNotifyOnComplete() ? 1 : 0);
+            if (isNotifyOnError())
+                entity.setNotifyOnError(isNotifyOnError() ? 1 : 0);
+            if ((isNotifyOnStart()))
+                entity.setNotifyOnStart(isNotifyOnStart() ? 1 : 0);
+            if (getRecoveryProfile() != null)
+                entity.setRecoveryProfileBean(new RecoveryProfile(getRecoveryProfile()));
+            if (getRecoveryTemplate() != null)
+                entity.setRecoveryTemplate(new RecoveryTemplate(getRecoveryTemplate()));
+            if (getServer() != null)
+                entity.setServer(getServer());
+            if (getSsh() != null)
+                entity.setSsh(getSsh());
+            if (getUri() != null)
+                entity.setUri(getUri());
+            if (isOption()) {
+                entity.setOption(isOption() ? 1 : 0);
+            }
+            if (getRecoveryApiOptionDtos() != null && !getRecoveryApiOptionDtos().isEmpty()) {
+                List<RecoveryApiOption> dtos = new ArrayList<>();
+                for (RecoveryApiOptionDto recoveryApiOptionDto : getRecoveryApiOptionDtos()) {
+                    RecoveryApiOption dto = recoveryApiOptionDto.toEntity();
+                    dto.setRecoveryApiCall(entity);
+                    dtos.add(dto);
+                }
+                entity.setRecoveryApiOptions(dtos);
+            }
+            if (getRecoveryApiResponseParamDtos() != null && !getRecoveryApiResponseParamDtos().isEmpty()) {
+                entity.setRecoveryApiResponseParams(new ArrayList<>());
+                for (RecoveryApiResponseParamDto recoveryApiResponseParamDto : getRecoveryApiResponseParamDtos()) {
+                    RecoveryApiResponseParam dto = recoveryApiResponseParamDto.toEntity();
+                    dto.setRecoveryApiCall(entity);
+                    entity.getRecoveryApiResponseParams().add(dto);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return entity;
+
+
+    }
+}

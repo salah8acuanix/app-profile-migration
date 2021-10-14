@@ -1,0 +1,139 @@
+package com.airgap.approfiling.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryTemplateRepository;
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.common.dto.RecoveryTemplateParamDto;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.error.DependentDataExistsException;
+import com.airgap.common.util.BackupServersVendorsUtil;
+import com.airgap.common.util.JsonUtil;
+
+@Service
+public class RecoveryTemplateImpl implements IRecoveryTemplate {
+
+    @Autowired
+    private RecoveryTemplateRepository repository;
+
+    @Override
+    public List<RecoveryTemplateDto> listAll() {
+        List<RecoveryTemplateDto> dtos = null;
+        try{
+            Iterable<RecoveryTemplate> all =  this.repository.findAll();
+            if(null != all){
+                dtos = new ArrayList<>();
+                for(RecoveryTemplate entity: all){
+                    RecoveryTemplateDto recoveryTemplateDto = entity.toDto();
+                    recoveryTemplateDto.setVendor(BackupServersVendorsUtil.getVendorName(entity.getServerVendor()));
+                    recoveryTemplateDto.setType(BackupServersVendorsUtil.getTypeName(entity.getServerVendor(),entity.getServerType()));
+                    recoveryTemplateDto.setVersion(BackupServersVendorsUtil.getVersionNumber(entity.getServerVendor(),entity.getServerType(),entity.getServerVersion()));
+                    dtos.add(recoveryTemplateDto);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+
+    @Override
+    public RecoveryTemplateDto save(RecoveryTemplateDto dto) {
+        try { // edited by ahmed abasy
+//            if(dto.getId()!= null){
+//                Iterable<RecoveryTemplateParam> allByRecoveryTemplate = recoveryTemplateParamRepository.findAllByRecoveryTemplate(new RecoveryTemplate(dto.getId()));
+//               if(null != allByRecoveryTemplate)
+//                recoveryTemplateParamRepository.deleteAll(allByRecoveryTemplate);
+//            }
+            return repository.save(dto.toEntity()).toDto();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(int id) {
+        try {
+            this.repository.deleteById(id);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    public RecoveryTemplateDto findById(Integer id) {
+        RecoveryTemplate recoveryTemplate = null;
+        try {
+            Optional<RecoveryTemplate> entity = this.repository.findById(id);
+            recoveryTemplate = entity.get();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw  new AbstractAirgapException(e.getMessage());
+        }
+        return recoveryTemplate.toDto();
+    }
+
+    @Override
+    public boolean validateJson(String json) {
+        try {
+            new JSONObject(json);
+        } catch (JSONException ex) {
+            // edited, to include @Arthur's comment
+            // e.g. in case JSONArray is valid as well...
+            try {
+                new JSONArray(json);
+            } catch (JSONException ex1) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private com.airgap.common.util.JsonUtil jsonUtil = new JsonUtil();
+
+
+
+    @Override
+    public List<RecoveryTemplateParamDto> getJsonKeys(String json) {
+        clearParams();
+        return jsonUtil.getJsonKeys(json);
+    }
+
+    @Override
+    public void clearParams() {
+         jsonUtil.clearParams();
+    }
+
+    @Override
+    public boolean deleteAll(List<RecoveryTemplateDto> restoreTemplates) {
+        try {
+            if(restoreTemplates!= null && !restoreTemplates.isEmpty()){
+                for(RecoveryTemplateDto dto : restoreTemplates){
+                    repository.deleteById(dto.getId());
+                }
+            }
+            return true;
+        } catch(Exception e) {
+            e.printStackTrace();
+            if(e instanceof  org.springframework.dao.DataIntegrityViolationException)
+                throw new DependentDataExistsException(e.getMessage());
+            else
+                throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+}

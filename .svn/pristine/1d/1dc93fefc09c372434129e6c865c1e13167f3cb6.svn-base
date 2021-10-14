@@ -1,0 +1,15 @@
+package com.airgap.approfiling.feignClients;
+
+import com.airgap.common.dto.ScheduledTaskLogsDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import javax.validation.Valid;
+
+@FeignClient("logging")
+public interface ScheduledTaskLogaFeignClient {
+
+    @PostMapping(value = "/logging/scheduledTaskLogs/save")
+    public ScheduledTaskLogsDto save(@RequestBody @Valid ScheduledTaskLogsDto dto);
+}

@@ -1,0 +1,92 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryWorkflow;
+import com.airgap.approfiling.model.RecoveryWorkflowDetails;
+import com.airgap.approfiling.model.RecoveryWorkflowGroup;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class RecoveryWorkflowGroupDto {
+
+    private Integer id;
+
+
+    private Integer orderNo;
+
+    private Integer runGroupsInParallel;
+
+
+    private List<RecoveryWorkflowDetailsDto> recoveryWorkflowDetailsDtos;
+
+
+    private Integer recoveryWorkflow;
+
+
+    public RecoveryWorkflowGroupDto() {
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public Integer getOrderNo() {
+        return orderNo;
+    }
+
+    public void setOrderNo(Integer orderNo) {
+        this.orderNo = orderNo;
+    }
+
+    public Integer getRunGroupsInParallel() {
+        return runGroupsInParallel;
+    }
+
+    public void setRunGroupsInParallel(Integer runGroupsInParallel) {
+        this.runGroupsInParallel = runGroupsInParallel;
+    }
+
+    public List<RecoveryWorkflowDetailsDto> getRecoveryWorkflowDetailsDtos() {
+        return recoveryWorkflowDetailsDtos;
+    }
+
+    public void setRecoveryWorkflowDetailsDtos(List<RecoveryWorkflowDetailsDto> recoveryWorkflowDetailsDtos) {
+        this.recoveryWorkflowDetailsDtos = recoveryWorkflowDetailsDtos;
+    }
+
+    public Integer getRecoveryWorkflow() {
+        return recoveryWorkflow;
+    }
+
+    public void setRecoveryWorkflow(Integer recoveryWorkflow) {
+        this.recoveryWorkflow = recoveryWorkflow;
+    }
+
+    public RecoveryWorkflowGroup toEntity(){
+        RecoveryWorkflowGroup entity = new RecoveryWorkflowGroup();
+        if(getId()!= null)
+            entity.setId(getId());
+        if(getOrderNo()!= null)
+            entity.setOrderNo(getOrderNo());
+        if(getRecoveryWorkflow()!= null)
+            entity.setRecoveryWorkflow(new RecoveryWorkflow(getRecoveryWorkflow()));
+        if(getRunGroupsInParallel()!= null)
+            entity.setRunGroupsInParallel(getRunGroupsInParallel());
+        if(getRecoveryWorkflowDetailsDtos()!= null){
+            List<RecoveryWorkflowDetails> recoveryWorkflowDetails = new ArrayList<>();
+            for(RecoveryWorkflowDetailsDto recoveryWorkflowDetailsDto: getRecoveryWorkflowDetailsDtos()){
+                RecoveryWorkflowDetails recoveryWorkflowDetails1 = recoveryWorkflowDetailsDto.toEntity();
+                recoveryWorkflowDetails1.setRecoveryWorkflowGroup(entity);
+                recoveryWorkflowDetails.add(recoveryWorkflowDetails1);
+            }
+            entity.setRecoveryWorkflowDetails(recoveryWorkflowDetails);
+        }
+        return entity;
+    }
+
+
+}

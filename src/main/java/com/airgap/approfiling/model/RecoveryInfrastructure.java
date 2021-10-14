@@ -1,0 +1,172 @@
+package com.airgap.approfiling.model;
+
+import java.io.Serializable;
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+
+/**
+ * The persistent class for the recovery_profiles database table.
+ * 
+ */
+@Entity
+@Table(name="recovery_infrastructure")
+public class RecoveryInfrastructure implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Column(name="created_by")
+	private String createdBy;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="created_on")
+	private Date createdOn;
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Integer id;
+
+	@Column(name="modified_by")
+	private String modifiedBy;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="modified_on")
+	private Date modifiedOn;
+	private Integer site;
+	@OneToMany(mappedBy="recoveryInfrastructure", cascade = CascadeType.ALL)
+	private List<RecoveryInfrastructureClient> recoveryInfrastructureClients;
+
+	public List<RecoveryInfrastructureClient> getRecoveryInfrastructureClients() {
+		return recoveryInfrastructureClients;
+	}
+
+	public void setRecoveryInfrastructureClients(List<RecoveryInfrastructureClient> recoveryInfrastructureClients) {
+		this.recoveryInfrastructureClients = recoveryInfrastructureClients;
+	}
+
+	public Integer getSite() {
+		return site;
+	}
+
+	public void setSite(Integer site) {
+		this.site = site;
+	}
+
+	private String name;
+
+	private String password;
+
+	@Column(name="recovery_host")
+	private String recoveryHost;
+
+	private String type;
+
+	private String url;
+
+	@Column(name="user_name")
+	private String userName;
+
+	private String version;
+
+	public RecoveryInfrastructure() {
+	}
+	public RecoveryInfrastructure(Integer id) {
+		this.id = id;
+	}
+	public String getCreatedBy() {
+		return this.createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public Date getCreatedOn() {
+		return this.createdOn;
+	}
+
+	public void setCreatedOn(Date createdOn) {
+		this.createdOn = createdOn;
+	}
+
+	public Integer getId() {
+		return this.id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public String getModifiedBy() {
+		return this.modifiedBy;
+	}
+
+	public void setModifiedBy(String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public Date getModifiedOn() {
+		return this.modifiedOn;
+	}
+
+	public void setModifiedOn(Date modifiedOn) {
+		this.modifiedOn = modifiedOn;
+	}
+
+	public String getName() {
+		return this.name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getPassword() {
+		return this.password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getRecoveryHost() {
+		return this.recoveryHost;
+	}
+
+	public void setRecoveryHost(String recoveryHost) {
+		this.recoveryHost = recoveryHost;
+	}
+
+	public String getType() {
+		return this.type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
+	public String getUrl() {
+		return this.url;
+	}
+
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	public String getUserName() {
+		return this.userName;
+	}
+
+	public void setUserName(String userName) {
+		this.userName = userName;
+	}
+
+	public String getVersion() {
+		return this.version;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
+	}
+
+}

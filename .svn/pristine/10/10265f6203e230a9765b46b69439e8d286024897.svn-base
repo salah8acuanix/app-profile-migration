@@ -1,0 +1,134 @@
+/*
+ * Copyright (c) Afaq Systems Co. is the owner of this artifact.
+ * @Author: Sayed Taha March 2020
+ */
+
+package com.airgap.approfiling.dto;
+
+
+import com.airgap.common.injection.SQLInjectionSafe;
+
+import java.util.Date;
+
+public class BackupServerTypeVersionApisUrlDto {
+	private Integer id;
+	private Integer version;
+	private Integer type;
+	private Integer vendor;
+
+	public Integer getVendor() {
+		return vendor;
+	}
+
+	public void setVendor(Integer vendor) {
+		this.vendor = vendor;
+	}
+
+	public Integer getType() {
+		return type;
+	}
+
+	public void setType(Integer type) {
+		this.type = type;
+	}
+
+	public String getVersionName() {
+		return versionName;
+	}
+
+	public void setVersionName(String versionName) {
+		this.versionName = versionName;
+	}
+
+	public String getTypeName() {
+		return typeName;
+	}
+
+	public void setTypeName(String typeName) {
+		this.typeName = typeName;
+	}
+
+	private String versionName, typeName;
+	public Integer getId() {
+		return id;
+	}
+
+	public void setId(Integer id) {
+		this.id = id;
+	}
+
+	public Integer getVersion() {
+		return version;
+	}
+
+	public void setVersion(Integer version) {
+		this.version = version;
+	}
+
+	public String getCreatedBy() {
+		return createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public String getModifiedBy() {
+		return modifiedBy;
+	}
+
+	public void setModifiedBy(String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public Date getCreatedOn() {
+		return createdOn;
+	}
+
+	public void setCreatedOn(Date createdOn) {
+		this.createdOn = createdOn;
+	}
+
+	public Date getModifiedOn() {
+		return modifiedOn;
+	}
+
+	public void setModifiedOn(Date modifiedOn) {
+		this.modifiedOn = modifiedOn;
+	}
+
+	public String getUrl() {
+		return url;
+	}
+
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	private String createdBy;
+	private String modifiedBy;
+	private Date createdOn;
+	private Date modifiedOn;
+	@SQLInjectionSafe
+	private String url;
+	private String[] urls;
+
+	public String[] getUrls() {
+		return urls;
+	}
+
+	public void setUrls(String[] urls) {
+		this.urls = urls;
+	}
+
+	public BackupServerTypeVersionApisUrlDto() {}
+	public BackupServerTypeVersionApisUrlDto(Integer id, Date createdOn, Integer version, Date modifiedOn, String url) {
+		this.id = id;
+		this.createdOn = createdOn;
+		this.version = version;
+		this.modifiedOn = modifiedOn;
+		this.url = url;
+	}
+
+
+}

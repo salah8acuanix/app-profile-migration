@@ -1,0 +1,92 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.service.IClientImportPlanService;
+import com.airgap.common.dto.ClientImportPlanDto;
+import com.airgap.common.dto.MetadataImportPlanDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class ClientImportController {
+
+    @Autowired
+    private IClientImportPlanService service;
+
+
+
+    @PostMapping(value="/clientImportPlan/save")
+    @CrossOrigin("*")
+    public ClientImportPlanDto save(@RequestBody @Valid ClientImportPlanDto dto){
+        return service.save(dto);
+    }
+
+    @PostMapping(value="/clientImportPlan/{planId}/{status}")
+    @CrossOrigin("*")
+    public boolean updatePlanStatus(@PathVariable("planId") Integer planId,
+                                    @PathVariable("status") Integer status){
+        return  service.updatePlanStatus(planId,status);
+    }
+
+
+    @PostMapping(value="/clientImportPlan/updateTrainStatus/{planId}")
+    public boolean updateTrainStatus(@PathVariable("planId") Integer planId,@RequestParam(name = "trained") Boolean trained){
+        return  service.updatePlanTrainStatus(planId,trained);
+    }
+
+
+
+    @GetMapping(value="/clientImportPlan/all")
+    @CrossOrigin("*")
+    public List<ClientImportPlanDto> all(){
+        return service.listAll();
+    }
+
+
+    @GetMapping(value="/clientImportPlan/{id}")
+    @CrossOrigin("*")
+    public ClientImportPlanDto findById(@PathVariable("id") Integer id){
+        return service.findById(id);
+    }
+
+    @GetMapping(value="/clientImportPlanByScheduledTask/{id}")
+    @CrossOrigin("*")
+    public List<ClientImportPlanDto> clientImportPlanByScheduledTaskAndScheduledTaskEnabled(@PathVariable("sceduledTaskId") Integer sceduledTaskId){
+        return service.clientImportPlanByScheduledTaskAndScheduledTaskEnabled(sceduledTaskId);
+    }
+
+
+    @DeleteMapping(value = "/clientImportPlan/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+    @DeleteMapping(value = "/clientImportPlan/deleteByBackupServer/{serverId}")
+    public boolean deleteByBackupServer(@PathVariable("serverId") Integer serverId) {
+        return service.deleteByBackupServer(serverId);
+    }
+
+    @PostMapping(value = "/clientImportPlan/deleteAll")
+    public boolean deleteAll(@RequestBody List<ClientImportPlanDto> dtos) {
+        return service.deleteAll(dtos);
+    }
+
+    @GetMapping(value="/clientImportPlanByServer/{serverId}")
+    @CrossOrigin("*")
+    public ClientImportPlanDto findByServerId(@PathVariable("serverId") Integer serverId){
+        return service.findClientPlanByServerId(serverId);
+    }
+
+
+    @PostMapping(value = "/clientImportPlan/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<ClientImportPlanDto> dtos,
+                          @PathVariable("status") Integer status) {
+        return service.activateOrDeactivate(dtos, status);
+    }
+
+
+
+}

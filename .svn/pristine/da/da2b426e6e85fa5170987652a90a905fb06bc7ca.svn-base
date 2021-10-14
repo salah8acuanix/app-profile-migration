@@ -1,0 +1,17 @@
+package com.airgap.approfiling.feignClients;
+
+import com.airgap.common.dto.AuditLogsDto;
+import com.airgap.common.service.BaseAuditFeign;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+
+import javax.validation.Valid;
+
+
+@FeignClient("logging")
+public interface AuditingFeignClient {
+    @PostMapping(value = "/logging/audit/logs/save")
+    public AuditLogsDto logAudit(@RequestBody @Valid AuditLogsDto dto );
+}

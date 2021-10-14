@@ -1,0 +1,20 @@
+package com.airgap.approfiling.feignClients;
+
+import com.airgap.common.dto.DiscoveredPolicyDto;
+import com.airgap.common.dto.PolicyWorkflowDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+/**
+ * @author Aya Yasser
+ * @date 8/16/2021
+ */
+
+@FeignClient("cimport")
+public interface ClientDiscoveredPoliciesFienClient {
+    @PostMapping(value = "/cimport/policy/save/server")
+    public boolean executePolicyWorkflow(@RequestBody PolicyWorkflowDto thePolicyWorkflow);
+}

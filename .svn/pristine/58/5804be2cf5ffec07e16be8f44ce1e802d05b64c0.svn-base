@@ -1,0 +1,26 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.common.dto.RecoveryImportJobDto;
+
+import java.util.List;
+
+public interface IRecoveryImportJobService {
+    List<RecoveryImportJobDto> listAll();
+    RecoveryImportJobDto save(RecoveryImportJobDto dto);
+    boolean delete(int id);
+    RecoveryImportJobDto findById(Integer id);
+    boolean deleteAll(List<RecoveryImportJobDto> dtos);
+    List<RecoveryImportJobDto> listAllByActive();
+    void run(RecoveryImportJobDto byId);
+    boolean updateRecoveryImportJobStatus(Integer recoveryImportJobId, Integer status);
+
+    RecoveryImportJobDto findRecoveryImportJobByServerId(Integer serverId, Integer test);
+
+    boolean activateOrDeactivate(List<RecoveryImportJobDto> dtos, Integer status);
+
+    boolean deleteByBackupServer(Integer serverId);
+
+    List<RecoveryImportJobDto> recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(Integer sceduledTaskId);
+
+    boolean updateRecoveryImportJobTrainStatus(Integer planId, Boolean trained);
+}

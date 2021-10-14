@@ -1,0 +1,44 @@
+package com.airgap.approfiling.dao;
+
+import com.airgap.approfiling.model.RecoveryImportJob;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import javax.transaction.Transactional;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface RecoveryImportJobRepository extends CrudRepository<RecoveryImportJob,Integer> {
+
+
+    Iterable<RecoveryImportJob> findAllByActive(Integer active);
+
+    @Transactional
+    @Modifying
+    @Query(value="update recovery_import_job set status =:status where id =:id", nativeQuery = true)
+    void updateRecoveryImportJobStatus(@Param("id") Integer id, @Param("status")Integer status);
+
+    @Transactional
+    @Modifying
+    @Query(value="update recovery_import_job set active = :status where id = :id", nativeQuery = true)
+    void activateOrDeactivate(Integer id, Integer status);
+
+
+    @Transactional
+    @Modifying
+    @Query(value="update recovery_import_job set trained =:trainFlag where id =:id", nativeQuery = true)
+    void updateRecoveryImportJobTrained(@Param("id") Integer id, @Param("trainFlag")Integer trainFlag);
+
+    Optional<RecoveryImportJob> findByBackupServer(Integer serverId);
+
+
+    List<RecoveryImportJob> findAllByScheduledTask(Integer sceduledTaskId);
+
+    List<RecoveryImportJob> findAllByTest(int i);
+
+    Optional<RecoveryImportJob> findByBackupServerAndTest(Integer serverId, Integer test);
+}

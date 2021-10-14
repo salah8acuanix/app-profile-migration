@@ -1,0 +1,15 @@
+package com.airgap.approfiling.feignClients;
+
+import com.airgap.common.dto.MetadataImportJobSettingDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+import java.util.List;
+
+@FeignClient("logging")
+public interface LoggingFeignClient {
+
+    @DeleteMapping(value = "/logging/dashboard/deleteAllJobLogs")
+    public void deleteAllJobLogs(@RequestBody List<MetadataImportJobSettingDto> plansList);
+}

@@ -1,0 +1,131 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryInfrastructure;
+import com.airgap.approfiling.model.RecoveryInfrastructureClient;
+
+import java.io.Serializable;
+import java.util.Date;
+public class RecoveryInfrastructureClientDto implements Serializable {
+	private static final long serialVersionUID = 1L;
+	private int anomalyStatus;
+	private String backup;
+	private Date backupDate;
+	private String client;
+	private String clientName;
+	private String createdBy;
+	private Date createdOn;
+	private int id;
+	private String modifiedBy;
+	private Date modified_on;
+	private Integer recoveryInfrastructure;
+
+	public RecoveryInfrastructureClientDto() {
+	}
+
+	public int getAnomalyStatus() {
+		return this.anomalyStatus;
+	}
+
+	public void setAnomalyStatus(int anomalyStatus) {
+		this.anomalyStatus = anomalyStatus;
+	}
+
+	public String getBackup() {
+		return this.backup;
+	}
+
+	public void setBackup(String backup) {
+		this.backup = backup;
+	}
+
+	public Date getBackupDate() {
+		return this.backupDate;
+	}
+
+	public void setBackupDate(Date backupDate) {
+		this.backupDate = backupDate;
+	}
+
+	public String getClient() {
+		return this.client;
+	}
+
+	public void setClient(String client) {
+		this.client = client;
+	}
+
+	public String getClientName() {
+		return this.clientName;
+	}
+
+	public void setClientName(String clientName) {
+		this.clientName = clientName;
+	}
+
+	public String getCreatedBy() {
+		return this.createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public Date getCreatedOn() {
+		return this.createdOn;
+	}
+
+	public void setCreatedOn(Date createdOn) {
+		this.createdOn = createdOn;
+	}
+
+	public Integer getRecoveryInfrastructure() {
+		return recoveryInfrastructure;
+	}
+
+	public void setRecoveryInfrastructure(Integer recoveryInfrastructure) {
+		this.recoveryInfrastructure = recoveryInfrastructure;
+	}
+
+	public int getId() {
+		return this.id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getModifiedBy() {
+		return this.modifiedBy;
+	}
+
+	public void setModifiedBy(String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public Date getModified_on() {
+		return this.modified_on;
+	}
+
+	public void setModified_on(Date modified_on) {
+		this.modified_on = modified_on;
+	}
+	public RecoveryInfrastructureClient toEntity(){
+		RecoveryInfrastructureClient entity = new RecoveryInfrastructureClient();
+		try{
+			entity.setId(id);
+			entity.setAnomalyStatus(anomalyStatus);
+			entity.setBackup(backup);
+			entity.setBackupDate(backupDate);
+			entity.setClient(client);
+			entity.setClientName(clientName);
+			entity.setCreatedBy(createdBy);
+			entity.setCreatedOn(createdOn);
+			entity.setModified_on(modified_on);
+			entity.setModifiedBy(modifiedBy);
+			entity.setRecoveryInfrastructure(new RecoveryInfrastructure(recoveryInfrastructure));
+		} catch (Exception e){
+			e.printStackTrace();
+		}
+		return entity;
+	}
+}

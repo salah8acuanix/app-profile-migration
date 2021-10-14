@@ -1,0 +1,26 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.service.IWorkflowTasksService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@CrossOrigin("*")
+public class WorkflowTasksController {
+
+    @Autowired
+    private IWorkflowTasksService iWorkflowTasksService;
+
+    @GetMapping("/runWorkflowRelatedTasks/{workflowId}")
+    public boolean runWorkflowTasks(@PathVariable("workflowId") Integer workflowId){
+        return iWorkflowTasksService.runWorkflowTasks(workflowId);
+    }
+
+    @GetMapping("/runWorkflowClassifyJobs/{workflowId}")
+    public boolean runWorkflowClassifyJobs(@PathVariable("workflowId") Integer workflowId){
+        return iWorkflowTasksService.runWorkflowClassifyJobs(workflowId);
+    }
+}

@@ -1,0 +1,121 @@
+package com.airgap.approfiling.model;
+
+import com.airgap.approfiling.dto.RecoveryTemplateParamLocalDto;
+
+import lombok.Data;
+
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+
+import java.io.Serializable;
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+
+/**
+ * The persistent class for the recovery_template database table.
+ * 
+ */
+@Data
+@Entity
+@Table(name="recovery_template")
+@NamedQuery(name="RecoveryTemplate.findAll", query="SELECT r FROM RecoveryTemplate r")
+public class RecoveryTemplate implements Serializable {
+	private static final long serialVersionUID = 1L;
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private Integer id;
+	@Column(name="created_by")
+	private String createdBy;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="created_on")
+	private Date createdOn;
+
+	private String json;
+
+	@Column(name="modified_by")
+	private String modifiedBy;
+
+	@Temporal(TemporalType.TIMESTAMP)
+	@Column(name="modified_on")
+	private Date modifiedOn;
+
+	private String name;
+
+	@Column(name="server_type")
+	private Integer serverType;
+
+	@Column(name="server_vendor")
+	private Integer serverVendor;
+
+	@Column(name="server_version")
+	private Integer serverVersion;
+
+	private Integer workload;
+
+	//bi-directional many-to-one association to RecoveryTemplateParam
+	@OneToMany(mappedBy="recoveryTemplate", cascade = CascadeType.ALL)
+	private List<RecoveryTemplateParam> recoveryTemplateParams;
+
+	public RecoveryTemplate() {}
+
+	public RecoveryTemplate(Integer id) {
+		this.id = id;
+	}
+
+	public RecoveryTemplateParam addRecoveryTemplateParam(RecoveryTemplateParam recoveryTemplateParam) {
+		getRecoveryTemplateParams().add(recoveryTemplateParam);
+		recoveryTemplateParam.setRecoveryTemplate(this);
+
+		return recoveryTemplateParam;
+	}
+
+	public RecoveryTemplateParam removeRecoveryTemplateParam(RecoveryTemplateParam recoveryTemplateParam) {
+		getRecoveryTemplateParams().remove(recoveryTemplateParam);
+		recoveryTemplateParam.setRecoveryTemplate(null);
+
+		return recoveryTemplateParam;
+	}
+
+
+	public RecoveryTemplateDto toDto(){
+
+		RecoveryTemplateDto dto = new RecoveryTemplateDto();
+		if(getId()!= null)
+			dto.setId(getId());
+		if(getCreatedBy()!= null)
+			dto.setCreatedBy(getCreatedBy());
+		if(getCreatedOn()!= null)
+			dto.setCreatedOn(getCreatedOn());
+		if(getModifiedBy()!= null)
+			dto.setModifiedBy(getModifiedBy());
+		if(getModifiedOn()!= null)
+			dto.setModifiedOn(getModifiedOn());
+		if(getJson()!= null)
+			dto.setJson(getJson());
+		if(getName()!= null)
+			dto.setName(getName());
+		if(getServerType()!= null)
+			dto.setServerType(getServerType());
+		if(getServerVendor()!= null)
+			dto.setServerVendor(getServerVendor());
+		if(getServerVersion()!= null)
+			dto.setServerVersion(getServerVersion());
+		if(getWorkload()!= null)
+			dto.setWorkload(getWorkload());
+		if(getRecoveryTemplateParams()!= null && !getRecoveryTemplateParams().isEmpty()){
+			List<RecoveryTemplateParamLocalDto> recoveryTemplateParamsDto = new ArrayList<>();
+			for(RecoveryTemplateParam recoveryTemplateParam: getRecoveryTemplateParams()){
+				RecoveryTemplateParamLocalDto dto1 = recoveryTemplateParam.toDto();
+				dto1.setRecoveryTemplate(recoveryTemplateParam.getRecoveryTemplate().getId());
+				recoveryTemplateParamsDto.add(dto1);
+			}
+			dto.setRecoveryTemplateParams(recoveryTemplateParamsDto);
+		}
+		return dto;
+	}
+
+}

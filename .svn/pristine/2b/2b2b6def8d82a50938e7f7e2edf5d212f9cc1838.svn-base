@@ -1,0 +1,87 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.dao.RecoveryTemplateParamRepository;
+import com.airgap.approfiling.dto.RecoveryTemplateParamLocalDto;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+import com.airgap.common.error.AbstractAirgapException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class RecoveryTemolateParamImpl implements IRecoveryTemplateParam{
+
+    @Autowired
+    private RecoveryTemplateParamRepository repository;
+
+    @Override
+    public List<RecoveryTemplateParamLocalDto> listAll() {
+        List<RecoveryTemplateParamLocalDto> dtos = null;
+        try{
+            Iterable<RecoveryTemplateParam> all =  this.repository.findAll();
+            if(null != all){
+                dtos = new ArrayList<>();
+                for(RecoveryTemplateParam entity: all){
+                    dtos.add(entity.toDto());
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+    @Override
+    public RecoveryTemplateParamLocalDto save(RecoveryTemplateParamLocalDto dto) {
+        try {
+            return repository.save(dto.toEntity()).toDto();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(int id) {
+        try {
+            this.repository.deleteById(id);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    public RecoveryTemplateParamLocalDto findById(Integer id) {
+        RecoveryTemplateParam recoveryTemplateParam = null;
+        try {
+            Optional<RecoveryTemplateParam> entity = this.repository.findById(id);
+            recoveryTemplateParam = entity.get();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw  new AbstractAirgapException(e.getMessage());
+        }
+        return recoveryTemplateParam.toDto();
+    }
+
+    @Override
+    public boolean saveAll(List<RecoveryTemplateParamLocalDto> dtos) {
+        try {
+            List<RecoveryTemplateParam> entities = new ArrayList<>();
+            for(RecoveryTemplateParamLocalDto dto: dtos){
+                RecoveryTemplateParam entity = dto.toEntity();
+                entities.add(entity);
+            }
+            repository.saveAll(entities);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+}

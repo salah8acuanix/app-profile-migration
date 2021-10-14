@@ -1,0 +1,69 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.dto.RecoveryInfrastructureDto;
+import com.airgap.approfiling.dto.RecoveryProfileDto;
+import com.airgap.approfiling.service.IRecoveryProfile;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class RecoveryProfileController {
+
+    @Autowired
+    private IRecoveryProfile rpServoce;
+
+    @PostMapping(value = "/recoveryProfile/save")
+    public ResponseEntity<RecoveryProfileDto> save(@RequestBody @Valid RecoveryProfileDto dto, @RequestHeader(name = "Authorization") String token) {
+        if(token!=null) {
+            dto.setToken(token);
+            RecoveryProfileDto recoveryProfileDto=rpServoce.save(dto ,token);
+            if (recoveryProfileDto!=null)
+                return new ResponseEntity<RecoveryProfileDto>(recoveryProfileDto, HttpStatus.OK);
+            else
+                return new ResponseEntity<RecoveryProfileDto>( HttpStatus.UNAUTHORIZED);
+        }else{
+            return new ResponseEntity<RecoveryProfileDto>( HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @GetMapping(value = "/recoveryProfile/all")
+    public List<RecoveryProfileDto> listAll() {
+        return rpServoce.listAll();
+    }
+
+
+    @GetMapping(value = "/recoveryProfile/{id}")
+    public RecoveryProfileDto findById(@PathVariable("id") Integer id) {
+        return rpServoce.findById(id);
+    }
+
+    @DeleteMapping(value = "/recoveryProfile/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id,@RequestHeader(name = "Authorization") String token) {
+        return rpServoce.deleteById(id,token);
+    }
+
+    @PostMapping(value = "/recoveryProfile/deleteAll")
+    public boolean delete(@RequestBody List<RecoveryProfileDto> dtos,@RequestHeader(name = "Authorization") String token) {
+        return rpServoce.deleteAll(dtos,token);
+    }
+
+
+
+    @GetMapping(value = "/recoveryProfile/find/sever/{id}")
+    public List<RecoveryProfileDto> ListAllByServer(@PathVariable("id") int severId) {
+        return rpServoce.findAllByServer(severId);
+    }
+
+}

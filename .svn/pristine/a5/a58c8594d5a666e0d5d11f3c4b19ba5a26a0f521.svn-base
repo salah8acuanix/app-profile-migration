@@ -1,0 +1,118 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryApiResponseParam;
+import com.airgap.approfiling.model.RecoveryApiResponseParamsValues;
+import com.airgap.approfiling.model.RecoveryWorkflowDetails;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+
+public class RecoveryApiResponseParamsValuesDto {
+
+
+    private Integer id;
+    private String value;
+    private String createdBy;
+    private Date createdOn;
+    private String modifiedBy;
+    private Date modifiedOn;
+    private Collection<RecoveryWorkflowDetailsDto> recoveryWorkflowDetailsList;
+    private Integer responseParam;
+
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Date getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(Date createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public Date getModifiedOn() {
+        return modifiedOn;
+    }
+
+    public void setModifiedOn(Date modifiedOn) {
+        this.modifiedOn = modifiedOn;
+    }
+
+    public Collection<RecoveryWorkflowDetailsDto> getRecoveryWorkflowDetailsCollection() {
+        return recoveryWorkflowDetailsList;
+    }
+
+    public void setRecoveryWorkflowDetailsCollection(Collection<RecoveryWorkflowDetailsDto> recoveryWorkflowDetails) {
+        this.recoveryWorkflowDetailsList = recoveryWorkflowDetails;
+    }
+
+    public Integer getResponseParam() {
+        return responseParam;
+    }
+
+    public void setResponseParam(Integer responseParam) {
+        this.responseParam = responseParam;
+    }
+
+    public RecoveryApiResponseParamsValues toEntity() {
+
+        RecoveryApiResponseParamsValues entity = new RecoveryApiResponseParamsValues();
+
+        if (id != null)
+            entity.setId(id);
+        if (value != null)
+            entity.setValue(value);
+        if (createdBy != null)
+            entity.setCreatedBy(createdBy);
+        if (createdOn != null)
+            entity.setCreatedOn(createdOn);
+        if (modifiedBy != null)
+            entity.setModifiedBy(modifiedBy);
+        if (modifiedOn != null)
+            entity.setModifiedOn(modifiedOn);
+        if (recoveryWorkflowDetailsList != null && !recoveryWorkflowDetailsList.isEmpty()) {
+            List<RecoveryWorkflowDetails> dtoList = new ArrayList<>();
+            for (RecoveryWorkflowDetailsDto item : recoveryWorkflowDetailsList) {
+                dtoList.add(item.toEntity());
+            }
+            entity.setRecoveryWorkflowDetailsList(dtoList);
+        }
+        if (responseParam != null)
+            entity.setResponseParam(new RecoveryApiResponseParam(getId()));
+
+        return entity;
+    }
+
+}

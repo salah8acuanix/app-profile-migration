@@ -1,0 +1,27 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.common.dto.TestClientImportDto;
+
+import java.util.List;
+
+public interface ITestClientImportService {
+
+    List<TestClientImportDto> listAll();
+    TestClientImportDto save(TestClientImportDto dto, String token);
+    boolean delete(int backupServer);
+    TestClientImportDto findByBackupServer(Integer backupServer);
+    boolean deleteAll(List<TestClientImportDto> dtos);
+    List<TestClientImportDto> listAllByActive();
+    void run(TestClientImportDto byId);
+    boolean updateTestClientImportStatus(Integer backupServer, Integer status);
+
+    TestClientImportDto findTestClientImportByServerId(Integer serverId, Integer test);
+
+    boolean activateOrDeactivate(List<TestClientImportDto> dtos, Integer status);
+
+    boolean deleteByBackupServer(Integer serverId);
+
+    List<TestClientImportDto> testClientImportByScheduledTaskAndScheduledTaskEnabled(Integer sceduledTaskId);
+
+    boolean updateTestClientImportTrainStatus(Integer serverId, Boolean trained);
+}

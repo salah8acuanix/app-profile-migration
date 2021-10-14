@@ -1,0 +1,15 @@
+package com.airgap.approfiling.dao;
+
+
+import com.airgap.approfiling.model.RecoveryProfileClientsBackups;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface RecoveryProfileClientBackupRepository extends CrudRepository<RecoveryProfileClientsBackups, Integer> {
+
+    List<RecoveryProfileClientsBackups> findByProfile_Id(Integer profileId);
+
+}

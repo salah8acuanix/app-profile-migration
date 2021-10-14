@@ -1,0 +1,36 @@
+package com.airgap.approfiling.dto;
+
+
+
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+import com.airgap.common.dto.RecoveryTemplateParamDto;
+
+public class RecoveryTemplateParamLocalDto extends RecoveryTemplateParamDto {
+
+    public RecoveryTemplateParam toEntity(){
+        RecoveryTemplateParam entity = new RecoveryTemplateParam();
+        if(getId()!= null)
+            entity.setId(getId());
+        if(getCreatedBy()!= null)
+            entity.setCreatedBy(getCreatedBy());
+        if(getCreatedOn()!= null)
+            entity.setCreatedOn(getCreatedOn());
+        if(getModifiedBy()!= null)
+            entity.setModifiedBy(getModifiedBy());
+        if(getModifiedOn()!= null)
+            entity.setModifiedOn(getModifiedOn());
+            entity.setMultivalued(isMultivalued()? 1:0);
+            entity.setSelected(isSelected()? 1:0);
+        if(getParamName()!= null)
+            entity.setParamName(getParamName());
+        if(getValueType()!= null)
+            entity.setValueType(getValueType());
+        if(getDataType()!= null)
+            entity.setDataType(getDataType());
+        if(getRecoveryTemplate()!= null)
+            entity.setRecoveryTemplate(new RecoveryTemplate(getRecoveryTemplate()));
+        return entity;
+    }
+
+}

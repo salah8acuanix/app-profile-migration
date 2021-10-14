@@ -1,0 +1,626 @@
+/**
+ * @author : Attia Saeed
+ */
+package com.airgap.approfiling.service;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
+
+import javax.servlet.http.HttpSession;
+
+import com.airgap.common.dao.redis.model.UserSessionParamDto;
+import com.airgap.common.dao.redis.repository.UserSessionRepo;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryApiCallRepository;
+import com.airgap.approfiling.dao.RecoveryProfileClientBackupRepository;
+import com.airgap.approfiling.dao.RecoveryTemplateParamRepository;
+import com.airgap.approfiling.dao.RecoveryTemplateRepository;
+import com.airgap.approfiling.dto.BackupServerTypeVersionApisUrlDto;
+import com.airgap.approfiling.dto.RecoveryApiCallDto;
+import com.airgap.approfiling.dto.RecoveryApiOptionDto;
+import com.airgap.approfiling.dto.RecoveryProfileClientsBackupsDto;
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.approfiling.dto.RecoveryTemplateParamDto;
+import com.airgap.approfiling.dto.RecoveryTemplateParamLocalDto;
+import com.airgap.approfiling.feignClients.AuditingFeignClient;
+import com.airgap.approfiling.feignClients.BackupServerFeignClient;
+import com.airgap.approfiling.feignClients.UserFeignClient;
+import com.airgap.approfiling.model.RecoveryApiCall;
+import com.airgap.approfiling.model.RecoveryProfileClientsBackups;
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+import com.airgap.common.dto.AuditLogsDto;
+import com.airgap.common.dto.BackupServerDto;
+import com.airgap.common.dto.MicroservicesNamesEnum;
+import com.airgap.common.dto.OperationEnum;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.util.RestApiCallsUtil;
+import com.jcraft.jsch.ChannelExec;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+
+@Service
+public class RecoveryApiCallService implements IRecoveryApiCall {
+
+	private static final Logger logger = LoggerFactory.getLogger(RecoveryApiCallService.class);
+
+	@Autowired
+	public HttpSession httpSession;
+
+	@Autowired
+	private RecoveryApiCallRepository recoveryApiCallRepository;
+
+	@Autowired
+	private IRecoveryTemplate templateService;
+
+	@Autowired
+	private AuditingFeignClient auditingService;
+
+	@Autowired
+	private RecoveryProfileClientBackupRepository recoveryProfileClientBackupRepository;
+
+	@Autowired
+	private BackupServerFeignClient backupServerFeignClient;
+
+	@Autowired
+	private RecoveryTemplateRepository recoveryTemplateRepository;
+
+	@Autowired
+	private RecoveryTemplateParamRepository recoveryTemplateParamRepository;
+	
+	@Autowired
+	private UserFeignClient userFeignClient;
+
+	@Autowired
+	private UserSessionRepo userSessionRepo;
+
+
+	@Override
+	public String getLoggedUser(String token){
+		try {
+			Optional<UserSessionParamDto> userSessionRepoById = userSessionRepo.findById(token);
+			if (userSessionRepoById.isPresent())
+				return userSessionRepoById.get().getName();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return "";
+	}
+
+
+	/**
+	 * @return List of RecoveryApiCallDto
+	 */
+	@Override
+	public List<RecoveryApiCallDto> listAll() {
+		
+		List<RecoveryApiCallDto> dtos = new ArrayList<>();
+		
+		try {
+
+			Iterable<RecoveryApiCall> all = recoveryApiCallRepository.findAll();
+
+			if (all != null) {
+				for (RecoveryApiCall entity : all) {
+					dtos.add(entity.toDto());
+				}
+			}
+			
+			return dtos;
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * Save RecoveryApiCallDto obj into DB
+	 *
+	 * @param dto
+	 * @return
+	 */
+	@Override
+	public RecoveryApiCallDto save(RecoveryApiCallDto dto, String token) {
+
+		String userName = getLoggedUser(token);
+		
+		RecoveryApiCallDto recoveryApiCallDto = null;
+		
+		try {
+			
+			try {
+				auditingService.logAudit(new AuditLogsDto(new Date(), MicroservicesNamesEnum.APP_PROFILING.toString(),
+						"Endpoints API Requests", OperationEnum.SAVE.toString(),
+						userName, "Endpoint (" + dto.getName() + ") saved"));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			
+			RecoveryTemplate recoveryTemplateEntity = recoveryTemplateRepository.findById(dto.getRecoveryTemplate()).get();
+			
+			dto.setRecoveryTemplate(recoveryTemplateEntity.toDto().getId());
+			
+			recoveryApiCallDto = recoveryApiCallRepository.save(dto.toEntity()).toDto();
+			
+			return recoveryApiCallDto;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * delete RecoveryApiCallDto obj from DB
+	 *
+	 * @param dto
+	 * @return
+	 */
+	@Override
+	public boolean delete(RecoveryApiCallDto dto, String token) {
+
+		String userName =getLoggedUser(token);
+
+		
+		try {
+			 recoveryApiCallRepository.delete(dto.toEntity());
+			try {
+				auditingService.logAudit(new AuditLogsDto(new Date(), MicroservicesNamesEnum.APP_PROFILING.toString(),
+						"Endpoints API Requests", OperationEnum.DELETE.toString(),
+						userName, "Endpoint (" + dto.getName() + ") deleted"));
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			
+			return true;
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * delete RecoveryApiCallDto by id
+	 *
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public boolean deleteById(int id, String token) {
+		try {
+			
+			recoveryApiCallRepository.deleteById(id);
+			
+			return true;
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * delete All RecoveryApiCallDto from DB
+	 *
+	 * @param list
+	 * @return
+	 */
+	@Override
+	public boolean deleteAll(List<RecoveryApiCallDto> list, String token) {
+		String userName = getLoggedUser(token);
+		try {
+			List<RecoveryApiCall> entities = null;
+			if (list != null && !list.isEmpty()) {
+				entities = entities == null ? new ArrayList<>() : entities;
+				for (RecoveryApiCallDto dto : list) {
+					try {
+						entities.add(dto.toEntity());
+						recoveryApiCallRepository.deleteAll(entities);
+						auditingService.logAudit(new AuditLogsDto(new Date(),
+								MicroservicesNamesEnum.APP_PROFILING.toString(), "Endpoints API Requests",
+								OperationEnum.DELETE.toString(), userName,
+								"Endpoint (" + dto.getName() + ") deleted"));
+					} catch (Exception e) {
+						e.getStackTrace();
+					}
+
+				}
+			}
+			
+			return true;
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * find RecoveryApiCallDto by id
+	 *
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public RecoveryApiCallDto findById(Integer id) {
+		
+		Optional<RecoveryApiCall> entity = null;
+		
+		try {
+			
+			entity = this.recoveryApiCallRepository.findById(id);
+			
+			return entity.get().toDto();
+			
+		} catch (Exception e) {
+			
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * @param id
+	 * @return
+	 */
+	@Override
+	public String runApi(Integer id) {
+
+		try {
+			StringBuilder result = new StringBuilder("");
+
+			RecoveryApiCallDto currentApi = findById(id);
+			
+			RecoveryTemplateDto template = templateService.findById(currentApi.getRecoveryTemplate());
+			
+			if (!currentApi.isOption()) {
+				
+				result.append(testRecoveryApiCallWithTemplate(template, currentApi));
+			
+			} else if (currentApi.isOption()) {
+
+				// This null data will be feteched from AIRGAB service via FeignClient call
+				/**
+				 * 192.168.1.173 22 root P@ssw0rd@123 ls
+				 */
+				if (currentApi.getSsh() != null) {
+					String[] arr = currentApi.getSsh().split(Pattern.quote("\\" + "n"));
+					for (String command : arr)
+						result.append(testRecoveryApiCallWithSSH("root", "P@ssw0rd@123", "192.168.1.173", 22, command));
+				}
+			}
+
+			return result.toString();
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(e.getMessage());
+			throw new AbstractAirgapException(e.getMessage());
+		}
+
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryApiCallDto>> findAll(int limit, int offset) {
+		List<RecoveryApiCallDto> dtos = new ArrayList<>();
+
+		try {
+			Iterable<RecoveryApiCall> all = recoveryApiCallRepository.findAll(PageRequest.of(offset, limit));
+			if (all != null) {
+				dtos = new ArrayList<>();
+				for (RecoveryApiCall entity : all) {
+					dtos.add(entity.toDto());
+				}
+			}
+			
+			return new ResponseEntity<List<RecoveryApiCallDto>>(dtos, HttpStatus.OK);
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryProfileClientsBackupsDto>> findRecoveryProfileClientsBackupsListByProfileId(Integer profileId) {
+		
+		List<RecoveryProfileClientsBackupsDto> dtos = new ArrayList<>();
+		
+		RecoveryProfileClientsBackupsDto abstractDto = new RecoveryProfileClientsBackupsDto();
+		
+		try {
+			
+			List<RecoveryProfileClientsBackups> all = recoveryProfileClientBackupRepository.findByProfile_Id(profileId);
+			if (all != null) {
+				dtos = new ArrayList<>();
+				for (RecoveryProfileClientsBackups item : all) {
+					abstractDto = new RecoveryProfileClientsBackupsDto();
+					abstractDto.setId(item.getId());
+					abstractDto.setClientName(item.getClientName());
+					dtos.add(abstractDto);
+				}
+			}
+			
+			return new ResponseEntity<List<RecoveryProfileClientsBackupsDto>>(dtos, HttpStatus.OK);
+		
+		} catch (Exception e) {
+			e.getStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+
+	}
+
+	/**
+	 * @param json
+	 * @param paramName
+	 * @param paramValue
+	 * @return
+	 * @author:attia saeed method: replace value in json with param's value
+	 */
+	private String replceValueInJson(String json, String paramName, String paramValue) {
+		try {
+			JSONObject jsonObject = new JSONObject(json.trim());
+			Iterator<String> keys = jsonObject.keys();
+			while (keys.hasNext()) {
+				String key = keys.next();
+				Object o = jsonObject.get(key);
+				if (key.equals(paramName)) {
+					jsonObject.put(key, paramValue);
+				} else if (o instanceof JSONArray) {
+					for (Object jsonObject1 : ((JSONArray) o)) {
+						JSONObject oo = (JSONObject) jsonObject1;
+						replceValueInJson(oo.toString(), paramName, paramValue);
+					}
+				} else if (o instanceof JSONObject) {
+					replceValueInJson(((JSONObject) o).toString(), paramName, paramValue);
+				}
+
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+
+		return json;
+	}
+
+	/**
+	 * @param template
+	 * @param currentApi
+	 * @return
+	 * @author:attia saeed test Recover api call with Template if option is false
+	 */
+	private String testRecoveryApiCallWithTemplate(RecoveryTemplateDto template, RecoveryApiCallDto currentApi) {
+		try {
+			String result = null;
+			String url = "";
+			StringBuilder json = new StringBuilder(template.getJson());
+			String tempParamName = null, tempParamValue = null;
+			for (RecoveryTemplateParamLocalDto param : template.getRecoveryTemplateParams()) { // loop over all selected
+																								// paramns
+				if (param.isSelected()) {
+					tempParamName = param.getParamName();
+					if (currentApi.getRecoveryApiOptionDtos() != null
+							&& !currentApi.getRecoveryApiOptionDtos().isEmpty())
+						for (RecoveryApiOptionDto option : currentApi.getRecoveryApiOptionDtos()) {
+							if (param.getId().equals(option.getOption())) {
+								// this param's value is needed to be replaced in the JSON
+								tempParamValue = option.getValue();
+								json = new StringBuilder(
+										replceValueInJson(json.toString(), tempParamName, tempParamValue));
+								break;
+							}
+						}
+				}
+
+			}
+			// * 4- new RestApiCallsUtil().callApi(method,url,json)
+			RestApiCallsUtil restApiCallsUtil = new RestApiCallsUtil();
+			result = restApiCallsUtil.callAPI(url, null, json.toString(), currentApi.getMethod(), "", "", null)
+					.toString();
+
+			return result;
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.println(e.getMessage());
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	/**
+	 * @param //ssh
+	 * @return
+	 * @author:attia saeed test Recover api call with ssh if option is true
+	 */
+
+	private String testRecoveryApiCallWithSSH(String username, String password, String host, int port, String ssh)
+			throws Exception {
+		Session session = null;
+		try {
+
+			JSch jsch = new JSch();
+			session = jsch.getSession(username, host, port);
+			session.setConfig("StrictHostKeyChecking", "no");
+			session.setPassword(password);
+			session.connect();
+			ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+			StringBuilder resultsBuilder = new StringBuilder("");
+			InputStream in = null;
+			BufferedReader reader = null;
+			String line = null;
+			resultsBuilder.append(">>  " + ssh + "\n");
+			channelExec.setCommand(ssh);
+			channelExec.connect();
+			in = channelExec.getInputStream();
+			reader = new BufferedReader(new InputStreamReader(in));
+			line = "";
+			while ((line = reader.readLine()) != null) {
+
+				resultsBuilder.append(line + "\n");
+
+			}
+			resultsBuilder.append("\n");
+
+			// Command execution completed here.
+			// Retrieve the exit status of the executed command
+			int exitStatus = channelExec.getExitStatus();
+			if (exitStatus > 0) {
+				System.out.println("Remote script exec error! " + exitStatus);
+			}
+			// Disconnect the Session
+			session.disconnect();
+			return resultsBuilder.toString();
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new AbstractAirgapException(e.getMessage());
+		}
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryTemplateDto>> getRecoveryTemplateByServerId(Integer serverId) {
+
+		List<RecoveryTemplateDto> recoveryTemplateDTOList = new ArrayList<>();
+
+		try {
+
+			logger.info("Getting backup server by server id : " + serverId);
+
+			BackupServerDto backupServerDTO = backupServerFeignClient.findServerById(serverId);
+
+			List<RecoveryTemplate> recoveryTemplateEntityList = recoveryTemplateRepository.findByServerVendorAndServerTypeAndServerVersion(backupServerDTO.getVendor(), backupServerDTO.getType(), backupServerDTO.getVersion());
+
+			logger.info("Start looping over entities to map it to dto, entity list size = " + recoveryTemplateEntityList.size());
+
+			recoveryTemplateEntityList.stream().forEach(currentRecoveryTemplate -> {
+
+				recoveryTemplateDTOList.add(currentRecoveryTemplate.toDto());
+
+			});
+
+			logger.info("Done looping over entities to map it to dto, dto list size = " + recoveryTemplateDTOList.size());
+
+			logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getTemplateByServerId : End Time : " + new Date());
+
+			return new ResponseEntity<>(recoveryTemplateDTOList, HttpStatus.OK);
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+
+			logger.error("Exception in : getTemplateByServerId : " + e.getMessage());
+
+			logger.error(">>>>>>>>>>>>>>> RecoveryApiCallController : getTemplateByServerId : End Time : " + new Date());
+
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+
+		}
+
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryTemplateParamDto>> getRecoveryTemplateParamsByRecoveryTemplateId(Integer recoveryTemplateId) {
+
+		List<RecoveryTemplateParamDto> recoveryTemplateParamDTOList = new ArrayList<>();
+
+		try {
+
+			logger.info("Getting recovery template selected params by template id : " + recoveryTemplateId);
+
+			List<RecoveryTemplateParam> selectedRecoveryTemplateParamList = recoveryTemplateParamRepository.findByRecoveryTemplateIdAndSelected(recoveryTemplateId, 1);
+
+			logger.info("Start looping over entities to map it to dto, entity list size = " + selectedRecoveryTemplateParamList.size());
+
+			selectedRecoveryTemplateParamList.stream().forEach(selectedTemplateParam -> {
+
+				RecoveryTemplateParamDto recoveryTemplateParamDTO = new RecoveryTemplateParamDto(selectedTemplateParam);
+
+				recoveryTemplateParamDTOList.add(recoveryTemplateParamDTO);
+			});
+
+			logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getRecoveryTemplateParamsByRecoveryTemplateId : End Time : " + new Date());
+
+			return new ResponseEntity<>(recoveryTemplateParamDTOList, HttpStatus.OK);
+
+		} catch (Exception e) {
+
+			e.printStackTrace();
+
+			logger.error("Exception in : getRecoveryTemplateParamsByRecoveryTemplateId : " + e.getMessage());
+
+			logger.error(">>>>>>>>>>>>>>> RecoveryApiCallController : getRecoveryTemplateParamsByRecoveryTemplateId : End Time : " + new Date());
+
+			return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+
+		}
+	}
+
+	@Override
+	public ResponseEntity<List<String>> getAllRecoveryOptions() {
+
+		List<String> recoveryOptionsList = new ArrayList<>();
+
+		try {
+
+			recoveryOptionsList.add("SSH");
+			recoveryOptionsList.add("Template");
+
+			return new ResponseEntity<List<String>>(recoveryOptionsList, HttpStatus.OK);
+
+		} catch (Exception e) {
+
+			return new ResponseEntity<List<String>>(recoveryOptionsList, HttpStatus.INTERNAL_SERVER_ERROR);
+
+		}
+
+	}
+
+	@Override
+	public ResponseEntity<List<BackupServerTypeVersionApisUrlDto>> getServerPathByServerId(Integer serverId) {
+
+		List<BackupServerTypeVersionApisUrlDto> serverTypeVersionApisUrlDTOList = new ArrayList<>();
+		
+		try {
+			
+			logger.info("Getting backup server to get path by server id : " + serverId);
+
+			BackupServerDto backupServerDTO = backupServerFeignClient.findServerById(serverId);
+			
+			serverTypeVersionApisUrlDTOList = backupServerFeignClient.findAUrlsForVersionAndType(backupServerDTO.getVendor(), backupServerDTO.getType(), backupServerDTO.getVersion());
+			
+			logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getServerPathByServerId : End Time : " + new Date());
+
+			return new ResponseEntity<>(serverTypeVersionApisUrlDTOList, HttpStatus.OK);
+			
+		} catch (Exception e) {
+
+			e.printStackTrace();
+
+			logger.error("Exception in : getServerPathByServerId : " + e.getMessage());
+
+			logger.error(">>>>>>>>>>>>>>> RecoveryApiCallController : getServerPathByServerId : End Time : " + new Date());
+
+			return new ResponseEntity<>(serverTypeVersionApisUrlDTOList, HttpStatus.INTERNAL_SERVER_ERROR);
+		
+		}
+		
+	}
+
+}

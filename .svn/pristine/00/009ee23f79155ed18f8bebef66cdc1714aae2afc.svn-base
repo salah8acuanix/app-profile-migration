@@ -1,0 +1,28 @@
+package com.airgap.approfiling.service;
+
+
+import com.airgap.approfiling.dto.RecoveryWorkflowDto;
+import com.airgap.common.service.IService;
+import org.springframework.data.domain.Page;
+
+import java.util.List;
+
+
+/**
+ * Author: Attia Saeed
+ * 04/01/2021
+ */
+public interface IRecoveryWorkflowService extends IService<RecoveryWorkflowDto> {
+
+    List<RecoveryWorkflowDto> findAll(int limit, int offset);
+    boolean updateStatusRecoveryWorkFlow(int id , Integer status);
+    RecoveryWorkflowDto save(RecoveryWorkflowDto recoveryWorkflowDto,String token);
+
+
+
+
+
+
+
+}
+

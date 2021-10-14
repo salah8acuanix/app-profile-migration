@@ -1,0 +1,106 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.service.IAdScheduledTaskService;
+import com.airgap.approfiling.dto.AdScheduledTaskDto;
+import com.airgap.common.dto.PaginingDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
+import java.io.ByteArrayInputStream;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class AdScheduledTaskController {
+
+    @Autowired
+    private IAdScheduledTaskService service;
+
+
+    @PostMapping(value = "/adScheduledTask/save")
+    @CrossOrigin("*")
+    public AdScheduledTaskDto save(@RequestBody @Valid AdScheduledTaskDto dto,@RequestHeader(name = "Authorization") String token) {
+        return service.save(dto, false,token );
+    }
+
+    //    @GetMapping(value = "/adScheduledTask/all")
+//    @CrossOrigin("*")
+//    public PaginingDto all(@RequestParam(required = false) Integer page, @RequestParam(required = false) Integer size, @RequestParam(required = false) boolean pagining) {
+//        return service.listAll(page, size, pagining);
+//    }
+    @GetMapping(value = "/adScheduledTask/all")
+    @CrossOrigin("*")
+    public PaginingDto all(@RequestParam Integer page, @RequestParam Integer size, @RequestParam boolean isPagining) {
+        return service.listAll(page, size, isPagining);
+    }
+
+
+    @GetMapping(value = "/adScheduledTask/checkWorkflowUsage/{workflowId}")
+    @CrossOrigin("*")
+    public Integer checkWorkflowUsage(@PathVariable("workflowId") Integer workflowId) {
+        return service.checkWorkflowUsage(workflowId);
+    }
+
+
+    @GetMapping(value = "/adScheduledTask/{id}")
+    @CrossOrigin("*")
+    public AdScheduledTaskDto findById(@PathVariable("id") Integer id) {
+        return service.findById(id);
+    }
+
+
+    @GetMapping(value = "/adScheduledTask/run/{id}")
+    @CrossOrigin("*")
+    public String run(@PathVariable("id") Integer id,@RequestHeader(name = "Authorization") String token) {
+        return service.run(service.findById(id),token);
+    }
+
+    @DeleteMapping(value = "/adScheduledTask/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+    @PostMapping(value = "/adScheduledTask/deleteAll")
+    public boolean deleteAll(@RequestBody List<AdScheduledTaskDto> dtos,@RequestHeader(name = "Authorization") String token) {
+        return service.deleteAll(dtos,token);
+    }
+
+
+    @PostMapping(value = "/adScheduledTask/script/save/{scheduleTaskId}")
+    @CrossOrigin("*")
+    public AdScheduledTaskDto save(@RequestParam MultipartFile file, @PathVariable("scheduleTaskId") Integer scheduleTaskId,
+                                   @RequestHeader(name = "Authorization") String token) {
+        return service.uploadScript(file, scheduleTaskId, token);
+    }
+
+
+    @GetMapping("/adScheduledTask/{id}/scriptFile/export")
+    public ResponseEntity<Resource> exportToExcel(HttpServletResponse response,
+                                                  @PathVariable("id") Integer id) {
+
+        ByteArrayInputStream stream = this.service.export(response, id);
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=ResearchPaper.pdf");
+        ByteArrayResource resource = new ByteArrayResource(stream.readAllBytes());
+        return ResponseEntity.ok().headers(headers).contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
+    }
+
+
+    @PostMapping(value = "/adScheduledTask/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<AdScheduledTaskDto> dtos,
+                                        @PathVariable("status") Integer status
+            ,@RequestHeader(name = "Authorization") String token) {
+        return service.activateOrDeactivate(dtos, status,token);
+    }
+
+
+}

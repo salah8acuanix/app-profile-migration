@@ -1,0 +1,127 @@
+/**
+ * @author: Attia Saeed
+ * 11/2020
+ */
+
+package com.airgap.approfiling.controller;
+
+import java.util.Date;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.airgap.approfiling.dto.BackupServerTypeVersionApisUrlDto;
+import com.airgap.approfiling.dto.RecoveryApiCallDto;
+import com.airgap.approfiling.dto.RecoveryProfileClientsBackupsDto;
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.approfiling.dto.RecoveryTemplateParamDto;
+import com.airgap.approfiling.service.RecoveryApiCallService;
+
+@RestController
+@CrossOrigin("*")
+@RequestMapping(path = RecoveryApiCallController.PATH)
+public class RecoveryApiCallController implements IController<RecoveryApiCallDto> {
+	public static final String PATH = "/recovery/ApiCall";
+
+	private static final Logger logger = LoggerFactory.getLogger(RecoveryApiCallController.class);
+
+	@Autowired
+	private RecoveryApiCallService recoveryApiCallService;
+
+	@Override
+	public ResponseEntity<RecoveryApiCallDto> save(RecoveryApiCallDto recoveryApiCallDto, String token) {
+		
+		logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : save : Start Time : " + new Date());
+		
+		return new ResponseEntity<RecoveryApiCallDto>(recoveryApiCallService.save(recoveryApiCallDto,token), HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<Boolean> delete(RecoveryApiCallDto recoveryApiCallDto, String token) {
+		
+		return new ResponseEntity<Boolean>(recoveryApiCallService.delete(recoveryApiCallDto,token), HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<Boolean> deleteById(int id, String token) {
+		
+		return new ResponseEntity<Boolean>(recoveryApiCallService.deleteById(id,token), HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<Boolean> deleteAll(List<RecoveryApiCallDto> list, String token) {
+		
+		return new ResponseEntity<Boolean>(recoveryApiCallService.deleteAll(list, token), HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryApiCallDto>> findAll() {
+		
+		return new ResponseEntity<List<RecoveryApiCallDto>>(recoveryApiCallService.listAll(), HttpStatus.OK);
+	}
+
+	@Override
+	public ResponseEntity<List<RecoveryApiCallDto>> findAll(int limit, int offset) {
+		return recoveryApiCallService.findAll(limit, offset);
+	}
+
+	@Override
+	public ResponseEntity<RecoveryApiCallDto> findById(Integer id) {
+		
+		return new ResponseEntity<RecoveryApiCallDto>(recoveryApiCallService.findById(id), HttpStatus.OK);
+	}
+
+	@GetMapping(value = "/test/{id}")
+	public String testAPI(@PathVariable("id") Integer id) {
+		return recoveryApiCallService.runApi(id);
+	}
+
+	@GetMapping(value = "/findBy/profileId/{id}")
+	public ResponseEntity<List<RecoveryProfileClientsBackupsDto>> findRecoveryProfileClientsBackupsListByProfileId(@PathVariable("id") Integer profileId) {
+		return recoveryApiCallService.findRecoveryProfileClientsBackupsListByProfileId(profileId);
+	}
+
+	// returns recovery template by server id
+	@GetMapping(value = "/templates/{serverId}")
+	public ResponseEntity<List<RecoveryTemplateDto>> getRecoveryTemplateByServerId(@PathVariable("serverId") Integer serverId) {
+
+		logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getRecoveryTemplateByServerId : Start Time : " + new Date());
+
+		return recoveryApiCallService.getRecoveryTemplateByServerId(serverId);
+	}
+
+	// returns recovery template params by recovery template id
+	@GetMapping(value = "/template-param/{recoveryTemplateId}")
+	public ResponseEntity<List<RecoveryTemplateParamDto>> getRecoveryTemplateParamsByRecoveryTemplateId(@PathVariable("recoveryTemplateId") Integer recoveryTemplateId) {
+
+		logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getRecoveryTemplateParamsByRecoveryTemplateId : Start Time : " + new Date());
+
+		return recoveryApiCallService.getRecoveryTemplateParamsByRecoveryTemplateId(recoveryTemplateId);
+	}
+
+	@GetMapping(value = "/recovery-options")
+	public ResponseEntity<List<String>> getAllRecoveryOptions() {
+
+		logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getAllRecoveryOptions : Start Time : " + new Date());
+
+		return recoveryApiCallService.getAllRecoveryOptions();
+	}
+	
+	// returns server path by server id
+	@GetMapping(value = "/server-path/{serverId}")
+	public ResponseEntity<List<BackupServerTypeVersionApisUrlDto>> getServerPathByServerId(@PathVariable("serverId") Integer serverId) {
+
+		logger.info(">>>>>>>>>>>>>>> RecoveryApiCallController : getServerPathByServerId : Start Time : " + new Date());
+
+		return recoveryApiCallService.getServerPathByServerId(serverId);
+	}
+}

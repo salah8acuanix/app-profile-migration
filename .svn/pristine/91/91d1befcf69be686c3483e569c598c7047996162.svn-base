@@ -1,0 +1,66 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.dto.AdScheduledTaskDto;
+import com.airgap.approfiling.feignClients.ClientsImportFeignClient;
+import com.airgap.common.dto.ClientImportPlanDto;
+import com.airgap.common.dto.MetadataImportPlanDto;
+import com.airgap.common.error.AbstractAirgapException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Service
+public class WorkflowTasksServiceImpl implements IWorkflowTasksService{
+
+    @Autowired
+    private IAdScheduledTaskService iAdScheduledTaskService;
+
+    @Autowired
+    private ClientsImportFeignClient clientsImportFeignClient;
+
+    @Autowired
+    private IClientImportPlanService iClientImportPlanService;
+
+    @Autowired
+    private IMetadataImportJobSettingService iMetadataImportJobSettingService;
+
+    @Override
+    public boolean runWorkflowTasks(Integer workflowId) {
+        try {
+            // first we get workflow related scheduled tasks and run them
+            List<AdScheduledTaskDto> adScheduledTaskDtos = iAdScheduledTaskService.listAll();
+            if(null != adScheduledTaskDtos && !adScheduledTaskDtos.isEmpty()){
+                for(AdScheduledTaskDto adScheduledTaskDto : adScheduledTaskDtos){
+                    if(adScheduledTaskDto.getRunBases().equals(2)){
+                        if(adScheduledTaskDto.getAirgapWorkflow().equals(workflowId))
+                            iAdScheduledTaskService.run(adScheduledTaskDto,"");
+                    }
+                }
+            }
+
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean runWorkflowClassifyJobs(Integer workflowId) {
+            List<ClientImportPlanDto> clientImportPlanDtos = iClientImportPlanService.clientImportPlanByAirgapWorkflow(workflowId);
+            if(null != clientImportPlanDtos && !clientImportPlanDtos.isEmpty()){
+                for(ClientImportPlanDto clientImportPlanDto : clientImportPlanDtos){
+                    if(clientImportPlanDto.getScheduleType().equals(1)){
+                        new Thread(
+                                ()->{
+                                    iMetadataImportJobSettingService.run(iMetadataImportJobSettingService.findByBackupServer(clientImportPlanDto.getBackupServer()));
+                                }
+                        ).start();
+                    }
+                }
+            }
+        return true;
+    }
+}

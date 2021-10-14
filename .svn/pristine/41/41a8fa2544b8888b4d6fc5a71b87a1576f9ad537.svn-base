@@ -1,0 +1,60 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.approfiling.service.IRecoveryTemplate;
+import com.airgap.common.dto.RecoveryTemplateParamDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class RecoveryTemplateController {
+
+    @Autowired
+    private IRecoveryTemplate iRecoveryTemplate;
+
+
+
+    @PostMapping(value="/recoveryTemplate/save")
+    @CrossOrigin("*")
+    public RecoveryTemplateDto save(@RequestBody @Valid RecoveryTemplateDto dto){
+        return iRecoveryTemplate.save(dto);
+    }
+
+    @GetMapping(value="/recoveryTemplate/all")
+    @CrossOrigin("*")
+    public List<RecoveryTemplateDto> all(){
+        return iRecoveryTemplate.listAll();
+    }
+
+
+    @GetMapping(value="/recoveryTemplate/{id}")
+    @CrossOrigin("*")
+    public RecoveryTemplateDto findById(@PathVariable("id") Integer id){
+        return iRecoveryTemplate.findById(id);
+    }
+
+    @DeleteMapping(value = "/recoveryTemplate/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return iRecoveryTemplate.delete(id);
+    }
+
+    @PostMapping("/recoveryTemplate/validateJson")
+    public boolean validateJson(@RequestBody RecoveryTemplateDto dto){
+        return this.iRecoveryTemplate.validateJson(dto.getJson());
+    }
+    @PostMapping("/recoveryTemplate/getJsonKeys")
+    public List<RecoveryTemplateParamDto> getJsonKeys(@RequestBody RecoveryTemplateDto dto){
+        this.iRecoveryTemplate.clearParams();
+        return this.iRecoveryTemplate.getJsonKeys(dto.getJson());
+    }
+
+    @PostMapping(value = "/recoveryTemplate/deleteAll")
+    public boolean delete(@RequestBody List<RecoveryTemplateDto> restoreTemplates) {
+        return iRecoveryTemplate.deleteAll(restoreTemplates);
+    }
+
+}

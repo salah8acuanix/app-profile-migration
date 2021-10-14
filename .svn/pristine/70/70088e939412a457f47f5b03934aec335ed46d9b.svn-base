@@ -1,0 +1,92 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+
+import lombok.Data;
+
+import java.util.Date;
+
+@Data
+public class RecoveryTemplateParamDto {
+
+	private String createdBy;
+
+	private Date createdOn;
+
+	private Integer id;
+
+	private Date modifiedOn;
+
+	private String modifiedBy;
+
+	private Boolean multivalued;
+
+	private Boolean selected;
+
+	private String paramName;
+
+	private Integer recoveryTemplate;
+	
+	private String valueType;
+
+	private Integer dataType;
+	
+	public RecoveryTemplateParamDto() {}
+	
+	public RecoveryTemplateParamDto(RecoveryTemplateParam entity) {
+		
+		this.id = entity.getId();
+		this.createdBy = entity.getCreatedBy() != null ? entity.getCreatedBy() : null;
+		this.createdOn = entity.getCreatedOn() != null ? entity.getCreatedOn() : null;
+		this.modifiedOn = entity.getModifiedOn() != null ? entity.getModifiedOn() : null;
+		this.modifiedBy = entity.getModifiedBy() != null ? entity.getModifiedBy() : null;
+		
+		if(entity.getMultivalued() == 1)
+			this.multivalued = true;
+		else
+			this.multivalued = false;
+		
+		if(entity.getSelected() == 1)
+			this.selected = true;
+		else
+			this.selected = false;
+		
+		this.paramName = entity.getParamName() != null ? entity.getParamName() : null;		
+		this.recoveryTemplate = entity.getRecoveryTemplate() != null ? entity.getRecoveryTemplate().getId() : null;
+		this.valueType = entity.getValueType() != null ? entity.getValueType() : null;
+		this.dataType = entity.getDataType() != null ? entity.getDataType() : null;
+		
+	}
+
+	public RecoveryTemplateParam toEntity() {
+		RecoveryTemplateParam entity = new RecoveryTemplateParam();
+		if (getId() != null)
+			entity.setId(getId());
+		if (getCreatedBy() != null)
+			entity.setCreatedBy(getCreatedBy());
+		if (getCreatedOn() != null)
+			entity.setCreatedOn(getCreatedOn());
+		if (getModifiedBy() != null)
+			entity.setModifiedBy(getModifiedBy());
+		if (getModifiedOn() != null)
+			entity.setModifiedOn(getModifiedOn());
+		if (getMultivalued())
+			entity.setMultivalued(getMultivalued() ? 1 : 0);
+		else
+			entity.setMultivalued(0);
+		if (getSelected())
+			entity.setSelected(getSelected() ? 1 : 0);
+		else
+			entity.setSelected(0);
+		if (getParamName() != null)
+			entity.setParamName(getParamName());
+		if(getValueType() != null)
+			entity.setValueType(getValueType());
+		if(getDataType() != null)
+			entity.setDataType(getDataType());
+		if (getRecoveryTemplate() != null)
+			entity.setRecoveryTemplate(new RecoveryTemplate(getRecoveryTemplate()));
+		return entity;
+	}
+}

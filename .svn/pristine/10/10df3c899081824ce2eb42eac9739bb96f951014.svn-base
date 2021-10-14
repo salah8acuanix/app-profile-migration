@@ -1,0 +1,17 @@
+package com.airgap.approfiling.dao;
+
+import java.util.List;
+
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+
+@Repository
+public interface RecoveryTemplateParamRepository extends CrudRepository<RecoveryTemplateParam, Integer> {
+	
+    Iterable<RecoveryTemplateParam> findAllByRecoveryTemplate(RecoveryTemplate template);
+    
+    List<RecoveryTemplateParam> findByRecoveryTemplateIdAndSelected(Integer recoveryTemplateId, Integer selected);
+}

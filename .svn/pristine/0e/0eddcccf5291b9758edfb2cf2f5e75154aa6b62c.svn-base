@@ -1,0 +1,18 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.dto.RecoveryInfrastructureDto;
+import com.airgap.common.service.IService;
+
+import java.util.List;
+
+public interface IRecoveryInfrastructure extends IService<RecoveryInfrastructureDto> {
+
+    List<RecoveryInfrastructureDto> findAll(int offset,int limit);
+
+}

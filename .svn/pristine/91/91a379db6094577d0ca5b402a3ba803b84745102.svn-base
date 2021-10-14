@@ -1,0 +1,343 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.AdScheduledTask;
+import com.airgap.common.util.DateUtil;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.sql.Time;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Year;
+import java.time.ZoneId;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
+
+public class AdScheduledTaskDto {
+
+    private String createdBy;
+
+    private Date createdOn;
+
+    private Integer id;
+
+    private String modifiedBy;
+
+    private Date modifiedOn;
+
+    private String name;
+
+    private Integer runAs;
+
+    private Integer runBases;
+
+    private Integer runDay;
+
+    private Time runTime;
+
+    private Integer server;
+
+    private String sshScript;
+
+    private String sshScriptFilePath;
+
+    private String backupServer;
+
+    private Integer active;
+
+    private Date lastRuntime;
+
+    private Date nextRuntime;
+
+    private Integer airgapWorkflow;
+
+    private String command;
+    private String result;
+    private Integer orderNo;
+
+    @JsonIgnore
+    private String token;
+    @JsonIgnore
+    private boolean isScheduled=false;
+
+    public boolean isScheduled() {
+        return isScheduled;
+    }
+
+    public void setScheduled(boolean scheduled) {
+        isScheduled = scheduled;
+    }
+
+    public String getCommand() {
+        return command;
+    }
+
+    public void setCommand(String command) {
+        this.command = command;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
+    }
+
+    public Integer getAirgapWorkflow() {
+        return airgapWorkflow;
+    }
+
+    public void setAirgapWorkflow(Integer airgapWorkflow) {
+        this.airgapWorkflow = airgapWorkflow;
+    }
+
+    public Date getLastRuntime() {
+        return lastRuntime;
+    }
+
+    public void setLastRuntime(Date lastRuntime) {
+        this.lastRuntime = lastRuntime;
+    }
+
+    public Date getNextRuntime() {
+        return nextRuntime;
+    }
+
+    public void setNextRuntime(Date nextRuntime) {
+        this.nextRuntime = nextRuntime;
+    }
+
+    public Integer getActive() {
+        return active;
+    }
+
+    public void setActive(Integer active) {
+        this.active = active;
+    }
+
+    public AdScheduledTaskDto() {
+    }
+
+
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Date getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(Date createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public Date getModifiedOn() {
+        return modifiedOn;
+    }
+
+    public void setModifiedOn(Date modifiedOn) {
+        this.modifiedOn = modifiedOn;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getRunAs() {
+        return runAs;
+    }
+
+    public void setRunAs(Integer runAs) {
+        this.runAs = runAs;
+    }
+
+    public Integer getRunBases() {
+        return runBases;
+    }
+
+    public void setRunBases(Integer runBases) {
+        this.runBases = runBases;
+    }
+
+    public Integer getRunDay() {
+        return runDay;
+    }
+
+    public void setRunDay(Integer runDay) {
+        this.runDay = runDay;
+    }
+
+    public Time getRunTime() {
+        return runTime;
+    }
+
+    public void setRunTime(Time runTime) {
+        this.runTime = runTime;
+    }
+
+    public Integer getServer() {
+        return server;
+    }
+
+    public void setServer(Integer server) {
+        this.server = server;
+    }
+
+    public String getSshScript() {
+        return sshScript;
+    }
+
+    public void setSshScript(String sshScript) {
+        this.sshScript = sshScript;
+    }
+
+    public String getSshScriptFilePath() {
+        return sshScriptFilePath;
+    }
+
+    public void setSshScriptFilePath(String sshScriptFilePath) {
+        this.sshScriptFilePath = sshScriptFilePath;
+    }
+
+    public String getBackupServer() {
+        return backupServer;
+    }
+
+    public Integer getOrderNo() {
+        return orderNo;
+    }
+
+    public void setOrderNo(Integer orderNo) {
+        this.orderNo = orderNo;
+    }
+
+    public void setBackupServer(String backupServer) {
+        this.backupServer = backupServer;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
+    public AdScheduledTask toEntity() {
+        AdScheduledTask entity = new AdScheduledTask();
+        if (getId() != null) {
+            entity.setId(getId());
+//            entity.setModifiedBy(httpSession.getAttribute("user_name").toString());
+//            entity.setCreatedBy(getCreatedBy());
+//            entity.setModifiedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+//            entity.setCreatedOn(getCreatedOn());
+        }
+//        else {
+////            entity.setCreatedBy(httpSession.getAttribute("user_name").toString());
+//          entity.setCreatedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+//        }
+        if (getName() != null)
+            entity.setName(getName());
+        if (getRunAs() != null)
+            entity.setRunAs(getRunAs());
+        if (getRunBases() != null)
+            entity.setRunBases(getRunBases());
+        if (getRunDay() != null)
+            entity.setRunDay(getRunDay());
+        if (getRunTime() != null) {
+            entity.setRunTime(getRunTime());
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+            String runTime = sdf.format(DateUtil.datePlusCurrentZoneOffset(getRunTime()));
+            String currTime = sdf.format(DateUtil.datePlusCurrentZoneOffset(new Date(Calendar.getInstance().getTimeInMillis())));
+            try {
+                System.out.println(sdf.parse(runTime));
+                System.out.println(sdf.parse(currTime));
+                if (getRunBases().equals(0)) {
+                    if (sdf.parse(currTime).after(sdf.parse(runTime))) {
+                        entity.setNextRuntime(Date.from(LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                    } else {
+                        entity.setNextRuntime(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                    }
+                } else if (getRunBases().equals(1)) {
+                    Integer runDay = getRunDay();
+                    calendar.setTime(new Date());
+                    int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK);
+                    dayOfWeek -= 1;
+                    if (runDay - dayOfWeek > 0)
+                        entity.setNextRuntime(Date.from(LocalDate.now().plusDays(runDay - dayOfWeek).atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                    else if (runDay - dayOfWeek == 0) {
+                        if (sdf.parse(currTime).after(sdf.parse(runTime))) {
+                            entity.setNextRuntime(Date.from(LocalDate.now().plusDays((runDay - dayOfWeek) + 7).atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                        } else {
+                            entity.setNextRuntime(Date.from(LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                        }
+                    } else
+                        entity.setNextRuntime(Date.from(LocalDate.now().plusDays((runDay - dayOfWeek) + 7).atStartOfDay(ZoneId.systemDefault()).toInstant()));
+                }
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+        }
+
+        if (getServer() != null)
+            entity.setServer(getServer());
+        if (getSshScript() != null)
+            entity.setSshScript(getSshScript());
+        if (getSshScriptFilePath() != null)
+            entity.setSshScriptFilePath(getSshScriptFilePath());
+        if (getActive() != null)
+            entity.setActive(getActive());
+        else
+            entity.setActive(1);
+        if (getLastRuntime() != null)
+            entity.setLastRuntime(getLastRuntime());
+        if (getAirgapWorkflow() != null)
+            entity.setAirgapWorkflow(getAirgapWorkflow());
+        if (getCreatedBy() != null) {
+            entity.setCreatedBy(getCreatedBy());
+        }
+        if (getCreatedOn() != null) {
+            entity.setCreatedOn(getCreatedOn());
+        }
+        if (getModifiedBy() != null) {
+            entity.setModifiedBy(getModifiedBy());
+        }
+        if (getModifiedOn() != null) {
+            entity.setModifiedOn(getModifiedOn());
+        }
+//        if(getNextRuntime()!= null)
+//            entity.setNextRuntime(getNextRuntime());
+        return entity;
+    }
+
+}

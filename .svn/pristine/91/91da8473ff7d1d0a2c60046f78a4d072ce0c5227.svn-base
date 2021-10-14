@@ -1,0 +1,87 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.service.IRecoveryImportJobService;
+import com.airgap.common.dto.RecoveryImportJobDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class RecoveryImportJobController {
+
+
+    @Autowired
+    private IRecoveryImportJobService service;
+
+    @PostMapping(value="/recoveryImportJob/save")
+    @CrossOrigin("*")
+    public RecoveryImportJobDto save(@RequestBody @Valid RecoveryImportJobDto dto){
+        return service.save(dto);
+    }
+
+    @PostMapping(value="/recoveryImportJob/{recoveryImportJobId}/{recoveryImportJobStatus}")
+    @CrossOrigin("*")
+    public boolean updatePlanStatus(@PathVariable("recoveryImportJobId") Integer planId,
+                                    @PathVariable("recoveryImportJobStatus") Integer status){
+        return  service.updateRecoveryImportJobStatus(planId,status);
+    }
+
+
+    @PostMapping(value="/recoveryImportJob/updateTrainStatus/{recoveryImportJobId}")
+    public boolean updateTrainStatus(@PathVariable("recoveryImportJobId") Integer planId,@RequestParam(name = "trained") Boolean trained){
+        return  service.updateRecoveryImportJobTrainStatus(planId,trained);
+    }
+
+
+
+    @GetMapping(value="/recoveryImportJob/all")
+    @CrossOrigin("*")
+    public List<RecoveryImportJobDto> all(){
+        return service.listAll();
+    }
+
+
+    @GetMapping(value="/recoveryImportJob/{id}")
+    @CrossOrigin("*")
+    public RecoveryImportJobDto findById(@PathVariable("id") Integer id){
+        return service.findById(id);
+    }
+
+    @GetMapping(value="/recoveryImportJobByScheduledTask/{sceduledTaskId}")
+    @CrossOrigin("*")
+    public List<RecoveryImportJobDto> clientImportPlanByScheduledTaskAndScheduledTaskEnabled(@PathVariable("sceduledTaskId") Integer sceduledTaskId){
+        return service.recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(sceduledTaskId);
+    }
+
+
+    @DeleteMapping(value = "/recoveryImportJob/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+    @DeleteMapping(value = "/recoveryImportJob/deleteByBackupServer/{serverId}")
+    public boolean deleteByBackupServer(@PathVariable("serverId") Integer serverId) {
+        return service.deleteByBackupServer(serverId);
+    }
+
+    @PostMapping(value = "/recoveryImportJob/deleteAll")
+    public boolean deleteAll(@RequestBody List<RecoveryImportJobDto> dtos) {
+        return service.deleteAll(dtos);
+    }
+
+    @GetMapping(value="/recoveryImportJobByServer/{serverId}/{test}")
+    @CrossOrigin("*")
+    public RecoveryImportJobDto findByServerId(@PathVariable("serverId") Integer serverId,@PathVariable("test") Integer test){
+        return service.findRecoveryImportJobByServerId(serverId,test);
+    }
+
+
+    @PostMapping(value = "/recoveryImportJob/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<RecoveryImportJobDto> dtos,
+                                        @PathVariable("status") Integer status) {
+        return service.activateOrDeactivate(dtos, status);
+    }
+}

@@ -1,0 +1,176 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import com.airgap.common.dao.redis.model.UserSessionParamDto;
+import com.airgap.common.dao.redis.repository.UserSessionRepo;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryProfileClientBackupRepository;
+import com.airgap.approfiling.dao.RecoveryProfileRepository;
+import com.airgap.approfiling.dto.RecoveryProfileClientsBackupsDto;
+import com.airgap.approfiling.dto.RecoveryProfileDto;
+import com.airgap.approfiling.feignClients.UserFeignClient;
+import com.airgap.approfiling.model.RecoveryProfile;
+import com.airgap.approfiling.model.RecoveryProfileClientsBackups;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.error.DependentDataExistsException;
+import com.airgap.common.service.BaseService;
+
+@Service
+public class RecoveryProfileService extends BaseService implements IRecoveryProfile {
+    @Autowired
+    private RecoveryProfileRepository rpDao;
+    @Autowired
+    private RecoveryProfileClientBackupRepository recoveryProfileClientBackupRepository;
+
+    @Autowired
+    private UserFeignClient userFeignClient;
+    @Autowired
+    private UserSessionRepo userSessionRepo;
+
+
+
+
+    @Override
+    public List<RecoveryProfileDto> listAll() {
+        List<RecoveryProfileDto> dtos = null;
+        try {
+            Iterable<RecoveryProfile> entities = rpDao.findAll();
+            if (entities != null) {
+                for (RecoveryProfile entiry : entities) {
+                    dtos = dtos == null ? new ArrayList<>() : dtos;
+                    dtos.add(entiry.toDto());
+                }
+
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+    @Override
+    public RecoveryProfileDto save(RecoveryProfileDto dto, String token) {
+        RecoveryProfile saved =null;
+        try {
+           Optional<UserSessionParamDto> userSessionParamDto= userSessionRepo.findById(dto.getToken());
+           if(userSessionParamDto.isPresent()) {
+               dto.updateStatisticsAttributes(userSessionParamDto.get().getName());
+               if (dto.getRecoveryProfileClientsBackupsDtos() != null && !dto.getRecoveryProfileClientsBackupsDtos().isEmpty()) {
+                   List<RecoveryProfileClientsBackups> deletedList = new ArrayList<>();
+                   for (RecoveryProfileClientsBackupsDto recoveryProfileClientsBackupsDto : dto.getRecoveryProfileClientsBackupsDtos()) {
+                       if (recoveryProfileClientsBackupsDto.isDeleted())
+                           deletedList.add(recoveryProfileClientsBackupsDto.toEntity());
+                   }
+
+                   saved = rpDao.save(dto.toEntity());
+                   if (!deletedList.isEmpty()) {
+                       for (RecoveryProfileClientsBackups recoveryProfileClientsBackups : deletedList) {
+                           recoveryProfileClientBackupRepository.deleteById(recoveryProfileClientsBackups.getId());
+                       }
+                   }
+               }
+               return saved.toDto();
+           }
+           else
+               return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(RecoveryProfileDto dto, String token) {
+        try {
+            rpDao.delete(dto.toEntity());
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean deleteById(int id, String token) {
+        try {
+            rpDao.deleteById(id);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean deleteAll(List<RecoveryProfileDto> list, String token) {
+        try {
+            List<RecoveryProfile> entities = null;
+            if (list != null && !list.isEmpty()) {
+                entities = entities == null ? new ArrayList<>() : entities;
+                for (RecoveryProfileDto dto : list)
+                    entities.add(dto.toEntity());
+                rpDao.deleteAll(entities);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (e instanceof ConstraintViolationException)
+                throw new DependentDataExistsException(e.getMessage());
+            else throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RecoveryProfileDto findById(Integer id) {
+        RecoveryProfileDto dto = null;
+        try {
+            Optional<RecoveryProfile> entity = rpDao.findById(id);
+            if (entity != null && entity.get() != null) {
+                return entity.get().toDto();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dto;
+    }
+
+
+    public List<RecoveryProfileDto> findAllByServer(int serverId) {
+        List<RecoveryProfileDto> dtos = new ArrayList<>();
+        RecoveryProfileDto abstractDto = null;
+        try {
+            List<RecoveryProfile> entities = rpDao.findByBackupServer(serverId);
+            if (entities != null) {
+                for (RecoveryProfile item : entities) {
+                    abstractDto = new RecoveryProfileDto();
+                    abstractDto.setId(item.getId());
+                    abstractDto.setName(item.getName());
+                    dtos.add(abstractDto);
+                }
+            }
+
+            return dtos;
+
+        } catch (Exception e) {
+            e.getStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+
+
+    }
+}

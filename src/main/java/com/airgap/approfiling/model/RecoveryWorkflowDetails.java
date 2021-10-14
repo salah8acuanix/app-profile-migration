@@ -1,0 +1,216 @@
+package com.airgap.approfiling.model;
+
+
+import javax.persistence.*;
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.Date;
+
+
+@Entity
+@Table(name = "recovery_workflow_details")
+public class RecoveryWorkflowDetails implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private Integer id;
+
+
+    @Column(name = "view_order")
+    private Integer viewOrder;
+
+    @Column(name = "node_type")
+    private Integer nodeType;
+
+    @Column(name = "node_id")
+    private Integer nodeId;
+
+    @Column(name = "airgap_api_call")
+    private Integer airgapApiCall;
+
+    @NotNull
+    @Column(name = "allow_monitor", nullable = false)
+    private Integer allowMonitor;
+
+    @Column(name = "created_by")
+    private String createdBy;
+
+    @Column(name = "crated_on")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date cratedOn;
+
+    @Column(name = "modified_by")
+    private String modifiedBy;
+
+    @Column(name = "modified_on")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date modifiedOn;
+
+    @JoinColumn(name = "recovery_api_call", referencedColumnName = "id")
+    @ManyToOne
+    private RecoveryApiCall recoveryApiCall;
+
+    @JoinColumn(name = "workflow_Id")
+    @ManyToOne
+    private RecoveryWorkflow recoveryWorkflow;
+
+    @JoinColumn(name = "response_parameter", referencedColumnName = "id")
+    @ManyToOne
+    private RecoveryApiResponseParam responseParameter;
+
+    @JoinColumn(name = "response_parameter_value", referencedColumnName = "id")
+    @ManyToOne
+    private RecoveryApiResponseParamsValues responseParameterValue;
+
+
+    @ManyToOne
+    @JoinColumn(name="recovery_workflow_group_id")
+    private RecoveryWorkflowGroup recoveryWorkflowGroup;
+
+
+
+
+
+    public void setAllowMonitor(Integer allowMonitor) {
+        this.allowMonitor = allowMonitor;
+    }
+
+    public RecoveryWorkflow getRecoveryWorkflow() {
+        return recoveryWorkflow;
+    }
+
+    public void setRecoveryWorkflow(RecoveryWorkflow recoveryWorkflow) {
+        this.recoveryWorkflow = recoveryWorkflow;
+    }
+
+    public RecoveryWorkflowGroup getRecoveryWorkflowGroup() {
+        return recoveryWorkflowGroup;
+    }
+
+    public void setRecoveryWorkflowGroup(RecoveryWorkflowGroup recoveryWorkflowGroup) {
+        this.recoveryWorkflowGroup = recoveryWorkflowGroup;
+    }
+
+    public RecoveryWorkflowDetails() {
+    }
+
+    public RecoveryWorkflowDetails(Integer id) {
+        this.id = id;
+    }
+
+    public RecoveryWorkflowDetails(Integer id, int allowMonitor) {
+        this.id = id;
+        this.allowMonitor = allowMonitor;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+
+
+    public Integer getViewOrder() {
+        return viewOrder;
+    }
+
+    public void setViewOrder(Integer viewOrder) {
+        this.viewOrder = viewOrder;
+    }
+
+    public Integer getNodeType() {
+        return nodeType;
+    }
+
+    public void setNodeType(Integer nodeType) {
+        this.nodeType = nodeType;
+    }
+
+    public Integer getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(Integer nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public Integer getAirgapApiCall() {
+        return airgapApiCall;
+    }
+
+    public void setAirgapApiCall(Integer airgapApiCall) {
+        this.airgapApiCall = airgapApiCall;
+    }
+
+    public int getAllowMonitor() {
+        return allowMonitor;
+    }
+
+    public void setAllowMonitor(int allowMonitor) {
+        this.allowMonitor = allowMonitor;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Date getCratedOn() {
+        return cratedOn;
+    }
+
+    public void setCratedOn(Date cratedOn) {
+        this.cratedOn = cratedOn;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public Date getModifiedOn() {
+        return modifiedOn;
+    }
+
+    public void setModifiedOn(Date modifiedOn) {
+        this.modifiedOn = modifiedOn;
+    }
+
+    public RecoveryApiCall getRecoveryApiCall() {
+        return recoveryApiCall;
+    }
+
+    public void setRecoveryApiCall(RecoveryApiCall recoveryApiCall) {
+        this.recoveryApiCall = recoveryApiCall;
+    }
+
+
+
+    public RecoveryApiResponseParam getResponseParameter() {
+        return responseParameter;
+    }
+
+    public void setResponseParameter(RecoveryApiResponseParam responseParameter) {
+        this.responseParameter = responseParameter;
+    }
+
+    public RecoveryApiResponseParamsValues getResponseParameterValue() {
+        return responseParameterValue;
+    }
+
+    public void setResponseParameterValue(RecoveryApiResponseParamsValues responseParameterValue) {
+        this.responseParameterValue = responseParameterValue;
+    }
+
+}

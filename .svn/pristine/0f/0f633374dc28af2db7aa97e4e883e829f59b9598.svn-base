@@ -1,0 +1,9 @@
+package com.airgap.approfiling.error;
+
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.error.AirgapControllerAdvice;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+
+@ControllerAdvice
+public class ProfilingControllerAdvice extends AirgapControllerAdvice {
+}

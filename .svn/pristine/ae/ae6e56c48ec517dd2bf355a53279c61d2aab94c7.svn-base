@@ -1,0 +1,32 @@
+package com.airgap.approfiling.service;
+
+import java.util.List;
+
+import org.springframework.http.ResponseEntity;
+
+import com.airgap.approfiling.dto.BackupServerTypeVersionApisUrlDto;
+import com.airgap.approfiling.dto.RecoveryApiCallDto;
+import com.airgap.approfiling.dto.RecoveryProfileClientsBackupsDto;
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.approfiling.dto.RecoveryTemplateParamDto;
+import com.airgap.common.service.IService;
+
+public interface IRecoveryApiCall extends IService<RecoveryApiCallDto> {
+
+    public String getLoggedUser(String token);
+
+    String runApi(Integer id);
+
+    ResponseEntity<List<RecoveryApiCallDto>> findAll(int limit, int offset);
+
+    ResponseEntity<List<RecoveryProfileClientsBackupsDto>> findRecoveryProfileClientsBackupsListByProfileId(Integer profileId);
+    
+    ResponseEntity<List<RecoveryTemplateDto>> getRecoveryTemplateByServerId(Integer serverId);
+    
+    ResponseEntity<List<RecoveryTemplateParamDto>> getRecoveryTemplateParamsByRecoveryTemplateId(Integer recoveryTemplateId);
+    
+    ResponseEntity<List<String>> getAllRecoveryOptions();
+    
+    ResponseEntity<List<BackupServerTypeVersionApisUrlDto>> getServerPathByServerId(Integer serverId);
+    
+}

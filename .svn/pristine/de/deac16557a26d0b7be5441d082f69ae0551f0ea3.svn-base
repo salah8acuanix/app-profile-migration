@@ -1,0 +1,35 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.common.dto.MetadataImportJobSettingDto;
+import com.airgap.common.dto.MetadataImportPlanDto;
+
+import java.util.List;
+
+public interface IMetadataImportPlanService {
+
+    List<MetadataImportPlanDto> listAll();
+
+    MetadataImportPlanDto save(MetadataImportPlanDto dto);
+
+    boolean delete(int id);
+
+    MetadataImportPlanDto findById(Integer id);
+
+    boolean deleteAll(List<MetadataImportPlanDto> dtos);
+
+    List<MetadataImportPlanDto> listAllByActive();
+
+    void run(MetadataImportJobSettingDto byId);
+
+    boolean updatePlanStatus(Integer planId, Integer status);
+
+    MetadataImportPlanDto findByServerId(Integer serverId);
+
+    boolean activateOrDeactivate(List<MetadataImportPlanDto> dtos, Integer status);
+
+    boolean deleteByBackupServer(Integer serverId);
+
+    List<MetadataImportPlanDto> findAllServerIdsAndStatus();
+
+    Integer findMetadataImportPlanByServerId(Integer serverId);
+}

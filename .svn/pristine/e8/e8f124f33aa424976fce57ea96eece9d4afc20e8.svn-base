@@ -1,0 +1,34 @@
+package com.airgap.approfiling.feignClients;
+
+
+import com.airgap.common.dto.*;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.*;
+
+import java.io.IOException;
+
+@FeignClient("cimport")
+public interface ClientsImportFeignClient {
+
+
+    // this for the whole import process (clients + backups + metadata)
+    @PostMapping("/cimport/importMetaData")
+    public boolean importMetadata(@RequestBody TrainDto trainDto,@RequestHeader(name = "Authorization") String token) throws IOException;
+
+
+    // this for import (clients + backups)
+    @PostMapping("/cimport/importRecovery")
+    public boolean importclientsAndBackups(@RequestBody RecoveryImportJobDto dto) throws IOException;
+
+
+    @PostMapping("/cimport/clientImportTest/getFilesFromPath")
+    public void saveFiles(@RequestBody TestClientImportDto testClientImportDto);
+
+    @DeleteMapping("/cimport/clientImportTest/deleteAll")
+    public void deleteAll();
+
+    @GetMapping("/cimport/policy/findDiscoveredPolicyCounByServer/{serverId}")
+     boolean findDiscoveredPolicyByServerCount(@PathVariable("serverId")  Integer serverId);
+
+
+}

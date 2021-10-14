@@ -1,0 +1,23 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.dao;
+
+import com.airgap.approfiling.model.RecoveryProfile;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface RecoveryProfileRepository extends CrudRepository<RecoveryProfile, Integer> {
+
+
+    List<RecoveryProfile> findByBackupServer(int backupServer);
+
+
+}

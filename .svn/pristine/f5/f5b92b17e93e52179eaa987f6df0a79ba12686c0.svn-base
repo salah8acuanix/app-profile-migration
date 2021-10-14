@@ -1,0 +1,94 @@
+package com.airgap.approfiling.controller;
+
+
+import com.airgap.approfiling.service.IMetadataImportJobSettingService;
+import com.airgap.common.dto.MetadataImportJobSettingDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class MetadataImportJobSettingController {
+
+
+    @Autowired
+    private IMetadataImportJobSettingService service;
+
+
+        @PostMapping(value="/metadataImportJob/save")
+    @CrossOrigin("*")
+    public MetadataImportJobSettingDto save(@RequestBody @Valid MetadataImportJobSettingDto dto,@RequestHeader(name = "Authorization") String token){
+        return service.save(dto,token);
+    }
+
+    @PostMapping(value="/metadataImportJob/{metadataImportJobId}/{metadataImportJobStatus}")
+    @CrossOrigin("*")
+    public boolean updatePlanStatus(@PathVariable("metadataImportJobId") Integer planId,
+                                    @PathVariable("metadataImportJobStatus") Integer status){
+        return  service.updateMetadataImportJobStatus(planId,status);
+    }
+
+
+    @PostMapping(value="/metadataImportJob/updateTrainStatus/{metadataImportJobId}/{trainStatus}")
+    public boolean updateTrainStatus(@PathVariable("metadataImportJobId") Integer planId,@PathVariable("trainStatus") Integer trainStatus){
+        return  service.updateMetadataImportJobTrainStatus(planId,trainStatus);
+    }
+
+
+
+    @GetMapping(value="/metadataImportJob/all")
+    @CrossOrigin("*")
+    public List<MetadataImportJobSettingDto> all(){
+        return service.listAll();
+    }
+
+
+    @GetMapping(value="/metadataImportJob/{id}")
+    @CrossOrigin("*")
+    public MetadataImportJobSettingDto findById(@PathVariable("id") Integer backupServer){
+        return service.findByBackupServer(backupServer);
+    }
+    @GetMapping(value="/findBackupServerAndServerPoliciesById/{id}")
+    @CrossOrigin("*")
+    public MetadataImportJobSettingDto findBackupServerAndServerPoliciesById(@PathVariable("id") Integer backupServer){
+        return service.findBackupServerAndServerPoliciesById(backupServer);
+    }
+
+    @GetMapping(value="/metadataImportJobByScheduledTask/{metadataImportJobId}")
+    @CrossOrigin("*")
+    public List<MetadataImportJobSettingDto> clientImportPlanByScheduledTaskAndScheduledTaskEnabled(@PathVariable("sceduledTaskId") Integer sceduledTaskId){
+        return service.metadataImportJobByScheduledTaskAndScheduledTaskEnabled(sceduledTaskId);
+    }
+
+
+    @DeleteMapping(value = "/metadataImportJob/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+    @DeleteMapping(value = "/metadataImportJob/deleteByBackupServer/{serverId}")
+    public boolean deleteByBackupServer(@PathVariable("serverId") Integer serverId) {
+        return service.deleteByBackupServer(serverId);
+    }
+
+    @PostMapping(value = "/metadataImportJob/deleteAll")
+    public boolean deleteAll(@RequestBody List<MetadataImportJobSettingDto> dtos,@RequestHeader(name = "Authorization") String token) {
+        return service.deleteAll(dtos,token);
+    }
+
+    @GetMapping(value="/metadataImportJobByServer/{serverId}")
+    @CrossOrigin("*")
+    public MetadataImportJobSettingDto findByServerId(@PathVariable("serverId") Integer serverId){
+        return service.findMetadataImportJobByServerId(serverId);
+    }
+
+
+    @PostMapping(value = "/metadataImportJobByServer/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<MetadataImportJobSettingDto> dtos,
+                                        @PathVariable("status") Integer status,@RequestHeader(name = "Authorization") String token) {
+        return service.activateOrDeactivate(dtos, status,token);
+    }
+}

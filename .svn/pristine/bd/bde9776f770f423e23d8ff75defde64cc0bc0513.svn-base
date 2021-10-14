@@ -1,0 +1,20 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.dto.RecoveryTemplateDto;
+import com.airgap.common.dto.RecoveryTemplateParamDto;
+
+import java.util.List;
+
+public interface IRecoveryTemplate {
+    List<RecoveryTemplateDto> listAll();
+    RecoveryTemplateDto save(RecoveryTemplateDto dto);
+    boolean delete(int id);
+    RecoveryTemplateDto findById(Integer id);
+    boolean validateJson(String json);
+
+    List<RecoveryTemplateParamDto> getJsonKeys(String json);
+
+    void clearParams();
+
+    boolean deleteAll(List<RecoveryTemplateDto> restoreTemplates);
+}

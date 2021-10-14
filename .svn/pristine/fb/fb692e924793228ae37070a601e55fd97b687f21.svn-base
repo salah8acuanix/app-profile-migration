@@ -1,0 +1,45 @@
+package com.airgap.approfiling.controller;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+/**
+ * Author: Attia Saeed
+ * 04/01/2021
+ */
+public interface IController<T> {
+
+    @GetMapping("/all")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<List<T>> findAll();
+
+    @GetMapping("/find/all")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<List<T>> findAll(@RequestParam int offset, @RequestParam int limit);
+
+    @GetMapping("/find/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<T> findById(@PathVariable("id") Integer id);
+
+    @PostMapping("/save")
+    @ResponseStatus(HttpStatus.CREATED)
+    ResponseEntity<T> save(@RequestBody @Valid T t, @RequestHeader(name = "Authorization") String token);
+
+    @PostMapping("/delete")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<Boolean> delete(@RequestBody T t, @RequestHeader(name = "Authorization") String token);
+
+    @DeleteMapping("delete/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<Boolean> deleteById(@PathVariable("id") int id, @RequestHeader(name = "Authorization") String token);
+
+    @PostMapping("/delete/all")
+    @ResponseStatus(HttpStatus.OK)
+    ResponseEntity<Boolean> deleteAll(@RequestBody List<T> list, @RequestHeader(name = "Authorization") String token);
+
+
+}

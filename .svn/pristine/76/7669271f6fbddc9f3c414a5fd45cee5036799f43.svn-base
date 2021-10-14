@@ -1,0 +1,33 @@
+package com.airgap.approfiling.service;
+
+
+import com.airgap.approfiling.dto.AdScheduledTaskDto;
+import com.airgap.common.dto.PaginingDto;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
+import java.util.List;
+
+public interface IAdScheduledTaskService {
+    List<AdScheduledTaskDto> listAll();
+    PaginingDto listAll(Integer page, Integer size, boolean isPagining);
+    AdScheduledTaskDto save(AdScheduledTaskDto dto,boolean isRunTask, String token);
+    boolean delete(int id);
+    AdScheduledTaskDto findById(Integer id);
+
+    AdScheduledTaskDto uploadScript(MultipartFile file, Integer scheduleTaskId, String token);
+
+    ByteArrayInputStream export(HttpServletResponse response, Integer id);
+
+    boolean deleteAll(List<AdScheduledTaskDto> dtos, String token);
+
+    boolean activateOrDeactivate(List<AdScheduledTaskDto> dtos, Integer status, String token);
+
+    List<AdScheduledTaskDto> listAllByActive();
+
+    Integer checkWorkflowUsage(Integer workflowId);
+
+    String run(AdScheduledTaskDto scheduledTaskDto, String token);
+
+}

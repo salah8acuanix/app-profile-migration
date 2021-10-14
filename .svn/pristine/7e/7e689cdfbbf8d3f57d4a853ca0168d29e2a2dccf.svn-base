@@ -1,0 +1,76 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.dto.RecoveryWorkflowDto;
+import com.airgap.approfiling.service.IRecoveryWorkflowService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * Author: Attia Saeed
+ */
+
+
+@RestController
+@RequestMapping(path = RecoveryWorkflowController.PATH)
+public class RecoveryWorkflowController implements IController<RecoveryWorkflowDto> {
+
+    public static final String PATH = "/recovery/workflow";
+
+    @Autowired
+    private IRecoveryWorkflowService iRecoveryWorkflowService;
+
+    @Override
+    public ResponseEntity<List<RecoveryWorkflowDto>> findAll() {
+    	
+        return new ResponseEntity<List<RecoveryWorkflowDto>>(iRecoveryWorkflowService.listAll(), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<List<RecoveryWorkflowDto>> findAll(int limit, int offset) {
+    	
+        return new ResponseEntity<List<RecoveryWorkflowDto>>(iRecoveryWorkflowService.findAll(limit, offset), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<RecoveryWorkflowDto> findById(Integer id) {
+    	
+        return new ResponseEntity<RecoveryWorkflowDto>(iRecoveryWorkflowService.findById(id), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<RecoveryWorkflowDto> save(RecoveryWorkflowDto recoveryWorkflowDto,String token) {
+    	
+        return new ResponseEntity<RecoveryWorkflowDto>(iRecoveryWorkflowService.save(recoveryWorkflowDto,token), HttpStatus.OK);
+
+    }
+
+    @Override
+    public ResponseEntity<Boolean> delete(RecoveryWorkflowDto recoveryWorkflowDto, String token) {
+    	
+        return new ResponseEntity<Boolean>(iRecoveryWorkflowService.delete(recoveryWorkflowDto,token), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Boolean> deleteById(int id,String token) {
+    	
+        return new ResponseEntity<Boolean>(iRecoveryWorkflowService.deleteById(id,token), HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Boolean> deleteAll(List<RecoveryWorkflowDto> list,String token) {
+    	
+        return new ResponseEntity<Boolean>(iRecoveryWorkflowService.deleteAll(list,token), HttpStatus.OK);
+    }
+
+    @GetMapping("status")
+    @ResponseStatus(HttpStatus.OK)
+    public boolean updateStatusRecoveryWorkFlow(@RequestParam Integer id, @RequestParam Integer status) {
+        return iRecoveryWorkflowService.updateStatusRecoveryWorkFlow(id, status);
+    }
+
+
+}

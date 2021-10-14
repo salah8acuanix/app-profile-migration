@@ -1,0 +1,38 @@
+package com.airgap.approfiling.feignClients;
+
+
+import com.airgap.approfiling.dto.BackupServerTypeVersionApisUrlDto;
+import com.airgap.common.dto.BackupServerDto;
+import com.airgap.common.dto.LicenseInfoDto;
+import com.airgap.common.dto.LogSevirityEnum;
+import com.airgap.common.dto.SiteDto;
+import feign.Headers;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+
+@FeignClient(value = "airgab")
+@Headers({"FEIGN_INTEG","SCHEDULER"})
+public interface ScheduledBackupServerFeignClient {
+
+    @GetMapping("/airgab/bserver/find_by_id/{id}")
+    public BackupServerDto findServerById(@PathVariable("id") Integer id);
+
+    @GetMapping("/airgab/sites/{id}")
+    public SiteDto findSiteById(@PathVariable("id") Integer id);
+
+    @GetMapping("/airgab/licenseInfo")
+    @Headers({"FEIGN_INTEG","SCHEDULER"})
+    public LicenseInfoDto getLicnseInfo();
+
+    @GetMapping(value = "/airgab/bserver/url/by_type_version")
+    public List<BackupServerTypeVersionApisUrlDto> findAUrlsForVersionAndType(@RequestParam("vendor") Integer vendor, @RequestParam("type") Integer type, @RequestParam("version") Integer version);
+    @PostMapping("/airgab/log_event")
+    ResponseEntity<Boolean> logEvent(@RequestParam("sev") LogSevirityEnum eventType,
+                                     @RequestParam("remark") String remarks,@RequestParam(value = "module",required = false)String module);
+}

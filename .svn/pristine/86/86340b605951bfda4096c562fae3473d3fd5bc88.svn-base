@@ -1,0 +1,102 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryTemplate;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+
+import lombok.Data;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import javax.servlet.http.HttpSession;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+@Data
+public class  RecoveryTemplateDto {
+
+    private Integer id;
+
+    private String createdBy;
+
+    private Date createdOn;
+
+    private String json;
+
+    private String modifiedBy;
+
+    private Date modifiedOn;
+
+    private String name;
+
+    private Integer serverType;
+
+    private Integer serverVendor;
+
+    private Integer serverVersion;
+
+    private boolean templateChanged;
+
+    private Integer workload;
+    
+    private String type;
+    
+    private String vendor;
+    
+    private String version;
+    
+    private List<RecoveryTemplateParamLocalDto> recoveryTemplateParams;
+    
+    @Autowired
+    private HttpSession httpSession;
+
+    public RecoveryTemplate toEntity(){
+        RecoveryTemplate entity = new RecoveryTemplate();
+        if(getId()!= null){
+            entity.setId(getId());
+//            entity.setModifiedBy(httpSession.getAttribute("user_name").toString());
+            entity.setCreatedBy(getCreatedBy());
+            entity.setModifiedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+            entity.setCreatedOn(getCreatedOn());
+        }else {
+//            entity.setCreatedBy(httpSession.getAttribute("user_name").toString());
+            entity.setCreatedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+        }
+
+        if(getCreatedBy()!= null)
+            entity.setCreatedBy(getCreatedBy());
+        if(getCreatedOn()!= null)
+            entity.setCreatedOn(getCreatedOn());
+        if(getModifiedBy()!= null)
+            entity.setModifiedBy(getModifiedBy());
+        if(getModifiedOn()!= null)
+            entity.setModifiedOn(getModifiedOn());
+        if(getJson()!= null)
+            entity.setJson(getJson());
+        if(getName()!= null)
+            entity.setName(getName());
+        if(getServerType()!= null)
+            entity.setServerType(getServerType());
+        if(getServerVendor()!= null)
+            entity.setServerVendor(getServerVendor());
+        if(getServerVersion()!= null)
+            entity.setServerVersion(getServerVersion());
+        if(getWorkload()!= null)
+            entity.setWorkload(getWorkload());
+        if(getRecoveryTemplateParams()!= null && !getRecoveryTemplateParams().isEmpty()){
+            List<RecoveryTemplateParam> recoveryTemplateParams = new ArrayList<>();
+          for(RecoveryTemplateParamLocalDto recoveryTemplateParamDto: getRecoveryTemplateParams()){
+              RecoveryTemplateParam recoveryTemplateParam = recoveryTemplateParamDto.toEntity();
+              recoveryTemplateParam.setRecoveryTemplate(entity);
+              recoveryTemplateParams.add(recoveryTemplateParam);
+          }
+          entity.setRecoveryTemplateParams(recoveryTemplateParams);
+        }
+        
+        
+        return entity;
+    }
+
+
+}

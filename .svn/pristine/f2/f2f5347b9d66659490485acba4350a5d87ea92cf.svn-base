@@ -1,0 +1,7 @@
+package com.airgap.approfiling.service;
+
+public interface IWorkflowTasksService {
+    boolean runWorkflowTasks(Integer workflowId);
+
+    boolean runWorkflowClassifyJobs(Integer workflowId);
+}

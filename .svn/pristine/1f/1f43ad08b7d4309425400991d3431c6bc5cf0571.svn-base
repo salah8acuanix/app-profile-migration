@@ -1,0 +1,83 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import com.airgap.approfiling.dto.RecoveryInfrastructureDto;
+import com.airgap.approfiling.service.IRecoveryInfrastructure;
+
+@RestController
+@RequestMapping(path = RecoveryInfrastructureController.PATH)
+@CrossOrigin("*")
+public class RecoveryInfrastructureController  {
+    public static final String PATH = "/recovery/Infrastructure";
+    
+    @Autowired
+    private IRecoveryInfrastructure iRecoveryInfrastructure;
+
+    @GetMapping("/all")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<List<RecoveryInfrastructureDto>> findAll() {
+    	
+        return new ResponseEntity<List<RecoveryInfrastructureDto>>(iRecoveryInfrastructure.listAll(), HttpStatus.OK);
+    }
+
+    @GetMapping("/find/all")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<List<RecoveryInfrastructureDto>> findAll(int offset, int limit) {
+    	
+        return new ResponseEntity<List<RecoveryInfrastructureDto>>(iRecoveryInfrastructure.findAll(offset, limit), HttpStatus.OK);
+    }
+
+    @GetMapping("/find/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<RecoveryInfrastructureDto> findById( Integer id) {
+    	
+        return new ResponseEntity<RecoveryInfrastructureDto>(iRecoveryInfrastructure.findById(id), HttpStatus.OK);
+    }
+
+    @PostMapping("/save")
+    public ResponseEntity<RecoveryInfrastructureDto> save( @RequestBody RecoveryInfrastructureDto dto,@RequestHeader(name = "Authorization") String token) {
+        if(token!=null) {
+            dto.setToken(token);
+            RecoveryInfrastructureDto recoveryInfrastructureDto=iRecoveryInfrastructure.save(dto ,token);
+            if (recoveryInfrastructureDto!=null)
+                return new ResponseEntity<RecoveryInfrastructureDto>(recoveryInfrastructureDto, HttpStatus.CREATED);
+            else
+                return new ResponseEntity<RecoveryInfrastructureDto>( HttpStatus.UNAUTHORIZED);
+        }else{
+            return new ResponseEntity<RecoveryInfrastructureDto>( HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @DeleteMapping("/delete/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Boolean> deleteById(int id, @RequestHeader(name = "Authorization") String token) {
+    	
+        return new ResponseEntity<Boolean>(iRecoveryInfrastructure.deleteById(id,token), HttpStatus.OK);
+    }
+
+    @PostMapping("/delete/all")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Boolean> deleteAll(List<RecoveryInfrastructureDto> list,@RequestHeader(name = "Authorization") String token) {
+        return new ResponseEntity<Boolean>(iRecoveryInfrastructure.deleteAll(list,token), HttpStatus.OK);
+    }
+
+    @PostMapping("/delete")
+    @ResponseStatus(HttpStatus.OK)
+    public ResponseEntity<Boolean> delete(RecoveryInfrastructureDto recoveryInfrastructureDto,@RequestHeader(name = "Authorization") String token) {
+        return new ResponseEntity<Boolean>(iRecoveryInfrastructure.delete(recoveryInfrastructureDto, token), HttpStatus.OK);
+    }
+
+
+}

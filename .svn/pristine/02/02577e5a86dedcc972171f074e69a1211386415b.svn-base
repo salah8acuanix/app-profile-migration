@@ -1,0 +1,14 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.dto.RecoveryTemplateParamLocalDto;
+
+import java.util.List;
+
+public interface IRecoveryTemplateParam {
+    List<RecoveryTemplateParamLocalDto> listAll();
+    RecoveryTemplateParamLocalDto save(RecoveryTemplateParamLocalDto dto);
+    boolean delete(int id);
+    RecoveryTemplateParamLocalDto findById(Integer id);
+
+    boolean saveAll(List<RecoveryTemplateParamLocalDto> dtos);
+}

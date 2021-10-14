@@ -1,0 +1,1016 @@
+package com.airgap.approfiling.service;
+
+import com.airgap.approfiling.constants.ScheduledTaskLogsType;
+import com.airgap.approfiling.dao.AdScheduledTaskRepository;
+import com.airgap.approfiling.dto.AdScheduledTaskDto;
+import com.airgap.approfiling.feignClients.*;
+import com.airgap.approfiling.model.AdScheduledTask;
+import com.airgap.common.dao.redis.model.UserSessionParamDto;
+import com.airgap.common.dao.redis.repository.UserSessionRepo;
+import com.airgap.common.dto.*;
+import com.airgap.common.enumeration.Module;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.error.AbstractWarningException;
+import com.airgap.common.security.JwtTokenUtil;
+import com.airgap.common.service.SshRemoteExampleUserinfo;
+import com.airgap.common.util.SSHUtil;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.Session;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+
+//import com.airlock.cimport.dto.CommandDto;
+//import com.airlock.cimport.service.SshRemoteExampleUserinfo;
+//import com.airlock.cimport.utils.SSHUtil;
+
+@Service
+public class AdScheduledTaskServiceImpl implements IAdScheduledTaskService {
+
+    @Autowired
+    private AdScheduledTaskRepository repository;
+
+    @Value("${script.upload.path}")
+    private String uploadPath;
+
+    @Autowired
+    private BackupServerFeignClient backupServerFeignClient;
+    @Autowired
+    private UserFeignClient userFeignClient;
+    @Autowired
+    private ClientDiscoveredPoliciesFienClient clientDiscoveredPoliciesFienClient;
+    @Autowired
+    private HttpSession httpSession;
+
+    @Autowired
+    private AuditingFeignClient auditingService;
+
+    private static final Logger logger = LoggerFactory.getLogger(AdScheduledTaskServiceImpl.class);
+
+
+    public AdScheduledTaskServiceImpl() {
+    }
+
+    @Override
+    public List<AdScheduledTaskDto> listAll() {
+        List<AdScheduledTaskDto> dtos = null;
+        try {
+            String serverName = "";
+            List<AdScheduledTask> all = repository.findAll();
+            if (all != null && !all.isEmpty()) {
+                dtos = new ArrayList<>();
+                for (AdScheduledTask task : all) {
+                    try {
+                        serverName = userFeignClient.findServerById(task.getServer()).getName();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    AdScheduledTaskDto adScheduledTaskDto = task.toDto();
+                    adScheduledTaskDto.setBackupServer(serverName);
+                    dtos.add(adScheduledTaskDto);
+                }
+                return dtos;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
+
+    @Autowired
+    JwtTokenUtil jwtTokenUtil;
+
+    @Override
+    public String run(AdScheduledTaskDto adScheduledTaskDto, String token) {
+        String taskRunCode = UUID.randomUUID().toString();
+        AdScheduledTaskDto byId = null;
+        StringBuilder returnedValue = null;
+        Session session = null;
+        CommandDto commandDto = null;
+        try {
+            byId = this.findById(adScheduledTaskDto.getId());
+            if (null != byId) {
+                // check active status
+                if (!byId.getActive().equals(1)) {
+                    throw new AbstractAirgapException("Cannot run deactivated scheduled task");
+                }
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+        BackupServerDto serverDto = null;
+        try {
+            byId = this.findById(adScheduledTaskDto.getId());
+            if (null != byId) {
+                byId.setLastRuntime(new Date(Calendar.getInstance().getTimeInMillis()));
+                save(byId, true, "");
+                boolean proceed = false;
+                for (int i = 0; i < 10; i++) {
+                    try {
+                        serverDto = this.backupServerFeignClient.findServerById(byId.getServer());
+                        proceed = true;
+                        break;
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (!proceed) {
+                    throw new AbstractAirgapException("Can't get server!");
+                }
+
+            }
+            String host = serverDto.getApiUrl().substring(serverDto.getApiUrl().indexOf("//") + 2);
+
+            if (byId.getRunAs() != 2) {
+
+                if (serverDto.getSshUsername() == null || serverDto.getSshPassword() == null) {
+                    throw new AbstractAirgapException("Backup server has no ssh credentials, add it from backup server configurations");
+                }
+
+                if (host.contains(":"))
+                    host = host.substring(0, host.indexOf(":"));
+                else if (host.contains("/"))  // extract host
+                    host = host.substring(0, host.indexOf("/"));
+                if (null != serverDto) {
+                    com.jcraft.jsch.JSch jsch = new JSch();
+                    boolean connectStatus = false;
+                    //            for (int i = 0; i < 3; i++) {
+                    Integer port = 22;
+                    if (serverDto.getPort() != null)
+                        port = serverDto.getPort();
+                    try {
+                        session = jsch.getSession(serverDto.getSshUsername(), host, port);
+                        session.setUserInfo(new SshRemoteExampleUserinfo(serverDto.getSshUsername(), serverDto.getSshPassword()));
+                        session.connect();
+                        connectStatus = true;
+                        //                    break;
+                    } catch (Exception e) {
+                        Thread.sleep(1000);
+                        connectStatus = false;
+                    }
+                    //            }
+                    if (!connectStatus) {
+                        throw new AbstractAirgapException("Failed to connect to server!");
+                    }
+                    commandDto = new CommandDto();
+                    returnedValue = new StringBuilder("");
+                }
+                // start audit log
+                try {
+                    /**
+                     * Log user logging as Audit entry
+                     */
+                    auditingService.logAudit(
+                            new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Anomaly Detection",
+                                    OperationEnum.RUN.toString(),
+//                                    httpSession.getAttribute("user_name") == null ? "User" : httpSession.getAttribute("user_name").toString()
+                                    getLoggedUser(token)
+                                    , "Scheduled Tasks: scheduled task (" + byId.getName() + ") start running"
+                            ));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                // end audit log
+            }
+            if (byId.getRunAs() == 0) {  // ssh
+                if (byId.getSshScript().contains("\n")) {
+
+                    String[] commands = byId.getSshScript().split("\n");
+                    for (String c : commands) {
+                        commandDto.setCommand(c);
+                        CommandDto executeCommand = SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+//                        if(!executeCommand.getResult().equals(""))
+                        returnedValue.append(c + "-> " + executeCommand.getResult()).append(", ");
+                        if (null != scheduledTaskLogaFeignClient) {
+                            ScheduledTaskLogsDto scheduledTaskLogsDto = new ScheduledTaskLogsDto();
+                            scheduledTaskLogsDto.setDescription(byId.getName());
+                            scheduledTaskLogsDto.setTaskId(adScheduledTaskDto.getId());
+                            scheduledTaskLogsDto.setCommand(c);
+                            scheduledTaskLogsDto.setResult(executeCommand.getResult());
+                            scheduledTaskLogsDto.setRunTime(new Date(Calendar.getInstance().getTimeInMillis()));
+                            scheduledTaskLogsDto.setType(ScheduledTaskLogsType.SCHEDULED_TASK.toString());
+                            scheduledTaskLogsDto.setTaskRunCode(taskRunCode);
+                            scheduledTaskLogaFeignClient.save(scheduledTaskLogsDto);
+                        }
+                    }
+                } else {
+                    returnedValue = new StringBuilder("");
+                    commandDto.setCommand(byId.getSshScript());
+                    CommandDto executeCommand = SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                    returnedValue.append(byId.getSshScript() + "-> " + executeCommand.getResult());
+                    if (null != scheduledTaskLogaFeignClient) {
+                        ScheduledTaskLogsDto scheduledTaskLogsDto = new ScheduledTaskLogsDto();
+                        scheduledTaskLogsDto.setDescription(byId.getName());
+                        scheduledTaskLogsDto.setTaskId(adScheduledTaskDto.getId());
+                        scheduledTaskLogsDto.setCommand(byId.getSshScript());
+                        scheduledTaskLogsDto.setResult(executeCommand.getResult());
+                        scheduledTaskLogsDto.setRunTime(new Date(Calendar.getInstance().getTimeInMillis()));
+                        scheduledTaskLogsDto.setType(ScheduledTaskLogsType.SCHEDULED_TASK.toString());
+                        scheduledTaskLogsDto.setTaskRunCode(taskRunCode);
+                        scheduledTaskLogaFeignClient.save(scheduledTaskLogsDto);
+                    }
+                }
+
+
+                // start calling import job and import metadata after scheduled task
+                // execute after run sceduled task
+                List<MetadataImportJobSettingDto> allClientImportPlansByScheduledTask = iClientImportPlanService.metadataImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                // calling clientImport
+                if (null != allClientImportPlansByScheduledTask && !allClientImportPlansByScheduledTask.isEmpty()) {
+                    for (MetadataImportJobSettingDto clientImportPlanDto : allClientImportPlansByScheduledTask) {
+                        clientImportPlanDto.setDataScienceStrategy("CLASSIFY");
+                        clientImportPlanDto.setServerName(serverDto.getName());
+                        clientImportPlanDto.setSiteName(serverDto.getSiteName());
+                        clientImportPlanDto.setStatus(1);
+                        if (clientImportPlanDto.getSite() != null) {
+                            boolean proceed = false;
+                            try {
+                                clientImportPlanDto.setSiteName(backupServerFeignClient.findSiteById(clientImportPlanDto.getSite()).getName());
+                                proceed = true;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            if (!proceed)
+                                throw new AbstractAirgapException("Can't get site name!");
+                        }
+//                        iMetadataImportPlanService.updatePlanStatus(clientImportPlanDto.getBackupServer(), 1);
+//                        new Thread(() -> {
+//                            try {
+//                                TrainDto trainDto = new TrainDto();
+//                                trainDto.setServerId(clientImportPlanDto.getBackupServer());
+//                                clientsImportFeignClient.importMetadata(trainDto,jwtTokenUtil.generateFakeToken());
+//                            } catch (IOException e) {
+//                            }
+//                        }).start();
+
+                        new Thread(() -> {
+                            if (null != clientsImportFeignClient && clientImportPlanDto.getTrained()) {
+                                TrainDto trainDto = new TrainDto();
+                                trainDto.setServerId(clientImportPlanDto.getBackupServer());
+                                String fakeToken = jwtTokenUtil.generateFakeToken();
+                                trainDto.setCurrentJobKind(3);
+                                try {
+                                    clientsImportFeignClient.importMetadata(trainDto,fakeToken);
+                                } catch (IOException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }).start();
+                    }
+                }
+                // end calling import job and import metadata after scheduled task
+
+
+                // start calling recoveryimport job
+                // execute after run sceduled task
+                List<RecoveryImportJobDto> recoveryImportJobDtos = iRecoveryImportJobService.recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                // calling clientImport
+                if (null != recoveryImportJobDtos && !recoveryImportJobDtos.isEmpty()) {
+                    for (RecoveryImportJobDto recoveryImportJobDto : recoveryImportJobDtos) {
+                        recoveryImportJobDto.setDataScienceStrategy("CLASSIFY");
+                        recoveryImportJobDto.setServerName(serverDto.getName());
+                        recoveryImportJobDto.setSiteName(serverDto.getSiteName());
+                        recoveryImportJobDto.setStatus(1);
+                        if (recoveryImportJobDto.getSite() != null) {
+                            boolean proceed = false;
+                            try {
+                                recoveryImportJobDto.setSiteName(backupServerFeignClient.findSiteById(recoveryImportJobDto.getSite()).getName());
+                                proceed = true;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            if (!proceed)
+                                throw new AbstractAirgapException("Can't get site name!");
+                        }
+                        iRecoveryImportJobService.updateRecoveryImportJobStatus(recoveryImportJobDto.getBackupServer(), 1);
+                        new Thread(() -> {
+                            try {
+                                clientsImportFeignClient.importclientsAndBackups(recoveryImportJobDto);
+                            } catch (IOException e) {
+                            }
+                        }).start();
+                    }
+                }
+                // end calling recovery import job
+
+
+                if (returnedValue.toString().endsWith(", "))
+                    returnedValue = new StringBuilder(returnedValue.toString().substring(0, returnedValue.toString().lastIndexOf(",")));
+                return returnedValue.toString();
+            } else if (byId.getRunAs() == 1) {  // script file
+                String sshScriptFilePath = byId.getSshScriptFilePath();
+                File scriptFile = null;
+                if (sshScriptFilePath != null)
+                    scriptFile = new File(sshScriptFilePath);
+                if (null != scriptFile) {
+
+                    if (System.getProperty("os.name").equalsIgnoreCase("linux")) {
+                        commandDto.setCommand("cd /");
+                        SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                        commandDto.setCommand("chmod +x " + sshScriptFilePath);
+                        SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                        commandDto.setCommand("cd /");
+                        SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                        commandDto.setCommand(sshScriptFilePath);
+                        CommandDto commandDto1 = SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                        // here we saving scheduled log
+
+                        if (null != scheduledTaskLogaFeignClient) {
+                            ScheduledTaskLogsDto scheduledTaskLogsDto = new ScheduledTaskLogsDto();
+                            scheduledTaskLogsDto.setDescription(byId.getName());
+                            scheduledTaskLogsDto.setTaskId(adScheduledTaskDto.getId());
+                            scheduledTaskLogsDto.setResult(commandDto1.getResult());
+                            scheduledTaskLogsDto.setRunTime(new Date(Calendar.getInstance().getTimeInMillis()));
+                            scheduledTaskLogsDto.setType(ScheduledTaskLogsType.SCHEDULED_TASK.toString());
+                            scheduledTaskLogsDto.setTaskRunCode(taskRunCode);
+                            scheduledTaskLogaFeignClient.save(scheduledTaskLogsDto);
+                        }
+
+                        // start calling import job and import metadata after scheduled task
+                        // execute after run sceduled task
+                        List<MetadataImportJobSettingDto> allClientImportPlansByScheduledTask = iClientImportPlanService.metadataImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                        // calling clientImport
+                        if (null != allClientImportPlansByScheduledTask && !allClientImportPlansByScheduledTask.isEmpty()) {
+                            for (MetadataImportJobSettingDto clientImportPlanDto : allClientImportPlansByScheduledTask) {
+                                clientImportPlanDto.setDataScienceStrategy("CLASSIFY");
+                                clientImportPlanDto.setServerName(serverDto.getName());
+                                clientImportPlanDto.setSiteName(serverDto.getSiteName());
+                                clientImportPlanDto.setStatus(1);
+                                if (clientImportPlanDto.getSite() != null) {
+                                    boolean proceed = false;
+                                    try {
+                                        clientImportPlanDto.setSiteName(backupServerFeignClient.findSiteById(clientImportPlanDto.getSite()).getName());
+                                        proceed = true;
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    if (!proceed)
+                                        throw new AbstractAirgapException("Can't get site name!");
+                                }
+//                                iMetadataImportPlanService.updatePlanStatus(clientImportPlanDto.getBackupServer(), 1);
+//                                new Thread(() -> {
+//                                    try {
+//                                        TrainDto trainDto = new TrainDto();
+//                                        trainDto.setServerId(clientImportPlanDto.getBackupServer());
+//                                        clientsImportFeignClient.importMetadata(trainDto,jwtTokenUtil.generateFakeToken());
+//                                    } catch (IOException e) {
+//                                    }
+//                                }).start();
+                                new Thread(() -> {
+                                if (null != clientsImportFeignClient && clientImportPlanDto.getTrained()) {
+                                    TrainDto trainDto = new TrainDto();
+                                    trainDto.setServerId(clientImportPlanDto.getBackupServer());
+                                    String fakeToken = jwtTokenUtil.generateFakeToken();
+                                    trainDto.setCurrentJobKind(3);
+                                    try {
+                                        clientsImportFeignClient.importMetadata(trainDto,fakeToken);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                }).start();
+                            }
+                        }
+                        // end calling import job and import metadata after scheduled task
+
+
+                        // start calling recoveryimport job
+                        // execute after run sceduled task
+                        List<RecoveryImportJobDto> recoveryImportJobDtos = iRecoveryImportJobService.recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                        // calling clientImport
+                        if (null != recoveryImportJobDtos && !recoveryImportJobDtos.isEmpty()) {
+                            for (RecoveryImportJobDto recoveryImportJobDto : recoveryImportJobDtos) {
+                                recoveryImportJobDto.setDataScienceStrategy("CLASSIFY");
+                                recoveryImportJobDto.setServerName(serverDto.getName());
+                                recoveryImportJobDto.setSiteName(serverDto.getSiteName());
+                                recoveryImportJobDto.setStatus(1);
+                                if (recoveryImportJobDto.getSite() != null) {
+                                    boolean proceed = false;
+                                    try {
+                                        recoveryImportJobDto.setSiteName(backupServerFeignClient.findSiteById(recoveryImportJobDto.getSite()).getName());
+                                        proceed = true;
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    }
+                                    if (!proceed)
+                                        throw new AbstractAirgapException("Can't get site name!");
+                                }
+                                iRecoveryImportJobService.updateRecoveryImportJobStatus(recoveryImportJobDto.getBackupServer(), 1);
+                                new Thread(() -> {
+                                    try {
+                                        clientsImportFeignClient.importclientsAndBackups(recoveryImportJobDto);
+                                    } catch (IOException e) {
+                                    }
+                                }).start();
+                            }
+                        }
+                        // end calling recovery import job
+
+
+                        return commandDto1.getResult();
+//                        Runtime rt= Runtime.getRuntime();
+//                        Process pr1 = rt.exec("cd /");
+//                        pr1.waitFor();
+//                        Process pr2 = rt.exec("chmod +x "+ sshScriptFilePath);
+//                        pr2.waitFor();
+//                        Process exec = rt.exec("cd /");
+//                        exec.waitFor();
+//                        Process pr3 = rt.exec(sshScriptFilePath);
+                        // ping to switch host
+//                    BufferedReader input = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+                    }
+
+//                    commandDto.setCommand(sshScriptFilePath);
+//                    CommandDto executeCommand = SSHUtil.executeCommand(session,host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+//                    return executeCommand.getResult();
+
+
+                    // copy file to remote server
+//                    Runtime rt = Runtime.getRuntime();
+//                    Process pr = rt.exec("scp " + sshScriptFilePath + " " + serverDto.getSshUsername() + "@" + host + ":/root");
+//                    BufferedReader input = new BufferedReader(new InputStreamReader(pr.getInputStream()));
+//                    String line = null;
+//
+//                    try {
+//                        while ((line = input.readLine()) != null) { // check if switch is up
+//                            System.out.println(line);
+//                        }
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                    pr.waitFor();
+
+                    byId.setLastRuntime(new Date(Calendar.getInstance().getTimeInMillis()));
+                    save(byId, true, "");
+
+                    commandDto.setCommand(byId.getSshScriptFilePath());
+                    CommandDto executeCommand = SSHUtil.executeCommand(session, host, serverDto.getSshUsername(), serverDto.getSshPassword(), commandDto);
+                    if (null != scheduledTaskLogaFeignClient) {
+                        ScheduledTaskLogsDto scheduledTaskLogsDto = new ScheduledTaskLogsDto();
+                        scheduledTaskLogsDto.setDescription(byId.getName());
+                        scheduledTaskLogsDto.setTaskId(adScheduledTaskDto.getId());
+                        scheduledTaskLogsDto.setResult(executeCommand.getResult());
+                        scheduledTaskLogsDto.setRunTime(new Date(Calendar.getInstance().getTimeInMillis()));
+                        scheduledTaskLogsDto.setType(ScheduledTaskLogsType.SCHEDULED_TASK.toString());
+                        scheduledTaskLogsDto.setTaskRunCode(taskRunCode);
+                        scheduledTaskLogaFeignClient.save(scheduledTaskLogsDto);
+                    }
+                    // start calling import job and import metadata after scheduled task
+                    // execute after run sceduled task
+                    List<MetadataImportJobSettingDto> allClientImportPlansByScheduledTask = iClientImportPlanService.metadataImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                    // calling clientImport
+                    if (null != allClientImportPlansByScheduledTask && !allClientImportPlansByScheduledTask.isEmpty()) {
+                        for (MetadataImportJobSettingDto clientImportPlanDto : allClientImportPlansByScheduledTask) {
+                            clientImportPlanDto.setDataScienceStrategy("CLASSIFY");
+                            clientImportPlanDto.setServerName(serverDto.getName());
+                            clientImportPlanDto.setSiteName(serverDto.getSiteName());
+                            clientImportPlanDto.setStatus(1);
+                            if (clientImportPlanDto.getSite() != null) {
+                                boolean proceed = false;
+                                try {
+                                    clientImportPlanDto.setSiteName(backupServerFeignClient.findSiteById(clientImportPlanDto.getSite()).getName());
+                                    proceed = true;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                if (!proceed)
+                                    throw new AbstractAirgapException("Can't get site name!");
+                            }
+//                            iMetadataImportPlanService.updatePlanStatus(clientImportPlanDto.getBackupServer(), 1);
+//                            new Thread(() -> {
+//                                try {
+//                                    TrainDto trainDto = new TrainDto();
+//                                    trainDto.setServerId(clientImportPlanDto.getBackupServer());
+//                                    clientsImportFeignClient.importMetadata(trainDto,jwtTokenUtil.generateFakeToken());
+//                                } catch (IOException e) {
+//                                }
+//                            }).start();
+                            new Thread(() -> {
+                                if (null != clientsImportFeignClient && clientImportPlanDto.getTrained()) {
+                                    TrainDto trainDto = new TrainDto();
+                                    trainDto.setServerId(clientImportPlanDto.getBackupServer());
+                                    String fakeToken = jwtTokenUtil.generateFakeToken();
+                                    trainDto.setCurrentJobKind(3);
+                                    try {
+                                        clientsImportFeignClient.importMetadata(trainDto,fakeToken);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }).start();
+                        }
+                    }
+                    // end calling import job and import metadata after scheduled task
+
+
+                    // start calling recoveryimport job
+                    // execute after run sceduled task
+                    List<RecoveryImportJobDto> recoveryImportJobDtos = iRecoveryImportJobService.recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(byId.getId());
+                    // calling clientImport
+                    if (null != recoveryImportJobDtos && !recoveryImportJobDtos.isEmpty()) {
+                        for (RecoveryImportJobDto recoveryImportJobDto : recoveryImportJobDtos) {
+                            recoveryImportJobDto.setDataScienceStrategy("CLASSIFY");
+                            recoveryImportJobDto.setServerName(serverDto.getName());
+                            recoveryImportJobDto.setSiteName(serverDto.getSiteName());
+                            recoveryImportJobDto.setStatus(1);
+                            if (recoveryImportJobDto.getSite() != null) {
+                                boolean proceed = false;
+                                try {
+                                    recoveryImportJobDto.setSiteName(backupServerFeignClient.findSiteById(recoveryImportJobDto.getSite()).getName());
+                                    proceed = true;
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                                if (!proceed)
+                                    throw new AbstractAirgapException("Can't get site name!");
+                            }
+                            iRecoveryImportJobService.updateRecoveryImportJobStatus(recoveryImportJobDto.getBackupServer(), 1);
+                            new Thread(() -> {
+                                try {
+                                    clientsImportFeignClient.importclientsAndBackups(recoveryImportJobDto);
+                                } catch (IOException e) {
+                                }
+                            }).start();
+                        }
+                    }
+                    // end calling recovery import job
+
+                    return executeCommand.getResult();
+                }
+            } else if (byId.getRunAs() == 2) {
+                try {
+                    PolicyWorkflowDto policyWorkflowDto = new PolicyWorkflowDto();
+                    policyWorkflowDto.setTaskId(adScheduledTaskDto.getId());
+                    policyWorkflowDto.setTaskName(adScheduledTaskDto.getName());
+                    policyWorkflowDto.setBackupserverId(byId.getServer());
+                    clientDiscoveredPoliciesFienClient.executePolicyWorkflow(policyWorkflowDto);
+
+                } catch (Exception e) {
+                    logger.error(e.getMessage());
+                    throw new AbstractAirgapException("Error occurred while running scheduled task: " + adScheduledTaskDto.getName() + "\n"
+                            + ", Please check <Policy Detection Workflow> report!");
+                }
+            }
+
+        } catch (AbstractAirgapException e) {
+            if (null != backupServerFeignClient) {
+                backupServerFeignClient.logEvent(LogSevirityEnum.ERROR,
+                        "Failed to run the scheduled task" + byId.getName() + " on " + byId.getRunTime() + " due to " + e.getMessage()
+                        , Module.ANOMALY_DETECTION.toString());
+            }
+            throw e;
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println(e.getMessage());
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return "";
+    }
+
+
+    @Override
+    public PaginingDto listAll(Integer page, Integer size, boolean isPagining) {
+        List<AdScheduledTaskDto> dtos = null;
+        try {
+            PaginingDto paginingDto = new PaginingDto();
+            List<AdScheduledTask> all = repository.findAll(PageRequest.of(page, size)).toList();
+            if (null != all && !all.isEmpty()) {
+                dtos = new ArrayList<>();
+                for (AdScheduledTask entity : all) {
+                    AdScheduledTaskDto adScheduledTaskDto = entity.toDto();
+
+                    // get backup server name
+                    if (entity.getServer() != null) {
+                        boolean proceed = false;
+                        for (int i = 0; i < 10; i++) {
+                            try {
+                                adScheduledTaskDto.setBackupServer(backupServerFeignClient.findServerById(entity.getServer()).getName());
+                                proceed = true;
+                                break;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if (!proceed)
+                            throw new AbstractAirgapException("Can't get backup server name!");
+                    }
+                    dtos.add(adScheduledTaskDto);
+                }
+                orderNo(dtos, page, size);
+                if (!isPagining) {
+                    paginingDto.setSize(repository.count());
+                }
+                paginingDto.setList(dtos);
+                return paginingDto;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return null;
+    }
+
+    @Autowired
+    UserSessionRepo userSessionRepo;
+
+    public String getLoggedUser(String token) {
+        try {
+            Optional<UserSessionParamDto> userSessionRepoById = userSessionRepo.findById(token);
+            if (userSessionRepoById.isPresent())
+                return userSessionRepoById.get().getName();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public AdScheduledTaskDto save(AdScheduledTaskDto dto, boolean isRunTask, String token) {
+        try {
+            String loggedInUser = null;
+            AdScheduledTask adScheduledTask = dto.toEntity();
+
+            if (!isRunTask) {
+                try {
+//                    loggedInUser = httpSession.getAttribute("user_name").toString();
+                    loggedInUser = getLoggedUser(token);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                if (dto.getId() != null) {
+                    if (loggedInUser != null) {
+                        adScheduledTask.setModifiedBy(loggedInUser);
+                    }
+                    adScheduledTask.setModifiedOn(new Date());
+                } else {
+                    if (loggedInUser != null)
+                        adScheduledTask.setCreatedBy(loggedInUser);
+                    adScheduledTask.setCreatedOn(new Date());
+                }
+            }
+            AdScheduledTask save = repository.save(adScheduledTask);
+
+            if (!isRunTask) {
+                // start audit log
+                try {
+                    /**
+                     * Log user logging as Audit entry
+                     */
+                   String operation =  dto.getId() == null ? "Saved" : "Updated";
+                    auditingService.logAudit(
+                            new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Anomaly Detection",
+                                    dto.getId() != null ? OperationEnum.UPDATE.toString() : OperationEnum.ADD.toString(),
+//                                httpSession.getAttribute("user_name") == null ? "User" : httpSession.getAttribute("user_name").toString()
+                                    getLoggedUser(token)
+                                    , "Scheduled Tasks: scheduled task (" +  dto.getName() + ") "  + operation
+                            ));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+            // end audit log
+            return save.toDto();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(int id) {
+        try {
+            this.repository.deleteById(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    public AdScheduledTaskDto findById(Integer id) {
+        AdScheduledTask adScheduledTask = null;
+        try {
+            Optional<AdScheduledTask> entity = this.repository.findById(id);
+            adScheduledTask = entity.get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return adScheduledTask.toDto();
+    }
+
+    @Override
+    public AdScheduledTaskDto uploadScript(MultipartFile file, Integer scheduleTaskId, String token) {
+        AdScheduledTaskDto adScheduledTaskDto;
+        try {
+            adScheduledTaskDto = findById(scheduleTaskId);
+            if (null != adScheduledTaskDto) {
+                if (file != null) {
+                    UUID uuid = UUID.randomUUID();
+                    FileOutputStream writer = new FileOutputStream(uploadPath + uuid + file.getOriginalFilename());
+                    writer.write(file.getBytes());
+                    adScheduledTaskDto.setSshScriptFilePath(uploadPath + uuid + file.getOriginalFilename());
+                    save(adScheduledTaskDto, true, token);
+                    writer.close();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return adScheduledTaskDto;
+    }
+
+    @Override
+    public ByteArrayInputStream export(HttpServletResponse response, Integer id) {
+        try {
+            response.setContentType("application/octet-stream");
+//            response.setHeader("Content-Disposition", "attachment; filename=datasheet.pdf");
+            ByteArrayInputStream stream = this.getInputStreamFromFilePath(id);
+            return stream;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Autowired
+    private ScheduledTaskLogaFeignClient scheduledTaskLogaFeignClient;
+
+    @Override
+    public boolean deleteAll(List<AdScheduledTaskDto> dtos, String token) {
+        try {
+            StringBuilder deletedSwiteched = new StringBuilder("");
+            StringBuilder noneDeletedSwitches = new StringBuilder("");
+            boolean deleted = false;
+            boolean noneDeleted = false;
+            if (!dtos.isEmpty() && dtos != null) {
+                for (AdScheduledTaskDto dto : dtos) {
+//                    Integer integer = repository.checkScheduledTaskUsages(dto.getId());
+//                    if(integer > 0){
+//                        noneDeletedSwitches.append(dto.getName() + ", ");
+//                        noneDeleted = true;
+//                    }else{
+                    repository.deleteById(dto.getId());
+//                        deletedSwiteched.append(dto.getName() + ", ");
+//                        deleted = true;
+//                    }
+                    try {
+                        /**
+                         * Log user logging as Audit entry
+                         */
+                        auditingService.logAudit(
+                                new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Anomaly Detection",
+                                        OperationEnum.DELETE.toString(),
+//                                        httpSession.getAttribute("user_name") == null ? "User" : httpSession.getAttribute("user_name").toString()
+                                        getLoggedUser(token)
+                                        , "Scheduled Tasks: scheduled task (" + dto.getName() + ") deleted"
+                                ));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+//            String deletedNames = "";
+//            String noneDeletedNames = "";
+//            if (noneDeletedSwitches.length() > 2)
+//                noneDeletedNames = noneDeletedSwitches.substring(0, noneDeletedSwitches.length() - 2);
+//            if (deletedSwiteched.length() > 2)
+//                deletedNames = deletedSwiteched.substring(0, deletedSwiteched.length() - 2);
+//            if (noneDeleted && deleted) {
+//                throw new AbstractWarningException("Cannot delete scheduled tasks(s) used in import plan(s) (" + noneDeletedNames + ")!!!"
+//                        + "scheduled task(s) (" + deletedNames + ") deleted successfully!");
+//            }
+//            if (noneDeleted && !deleted) {
+//                throw new AbstractAirgapException("Cannot delete scheduled task(s) (" + noneDeletedNames + "), because of usages in import plan(s)");
+//            }
+
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Autowired
+    private IMetadataImportJobSettingService iClientImportPlanService;
+
+    @Autowired
+    private IRecoveryImportJobService iRecoveryImportJobService;
+
+    @Autowired
+    private ClientsImportFeignClient clientsImportFeignClient;
+
+
+    @Autowired
+    private IMetadataImportPlanService iMetadataImportPlanService;
+
+
+    @Override
+    public boolean activateOrDeactivate(List<AdScheduledTaskDto> dtos, Integer status, String token) {
+        try {
+            List<String> wfNamesAlreadyActivated = null;
+            List<String> wfNamesHasBeenActivated = null;
+            List<String> wfNamesAlreadyDeactivated = null;
+            List<String> wfNamesHasBeenDeActivated = null;
+            List<String> wfNamesAlreadyRunning = null;
+            boolean proceed = true;
+            if (dtos != null && !dtos.isEmpty()) {
+                wfNamesAlreadyActivated = new ArrayList<>();
+                wfNamesHasBeenActivated = new ArrayList<>();
+                wfNamesAlreadyDeactivated = new ArrayList<>();
+                wfNamesHasBeenDeActivated = new ArrayList<>();
+                wfNamesAlreadyRunning = new ArrayList<>();
+                for (AdScheduledTaskDto dto : dtos) {
+                    AdScheduledTask wf = repository.findById(dto.getId()).get();
+                    if (status == 1) {
+                        if (wf.getActive() != null && wf.getActive() == 1) {
+                            wfNamesAlreadyActivated.add(dto.getName());
+                        } else {
+                            wfNamesHasBeenActivated.add(dto.getName());
+                            repository.activateOrDeactivate(wf.getId(), status);
+                        }
+                    } else {
+                        if (wf.getActive() != null && wf.getActive() == 0) {
+                            wfNamesAlreadyDeactivated.add(dto.getName());
+                        } else {
+                            wfNamesHasBeenDeActivated.add(dto.getName());
+                        }
+                    }
+
+                    repository.activateOrDeactivate(wf.getId(), status);
+                    String nowStatus = "activated";
+                    if (status == 0) nowStatus = "deactivated";
+
+                    try {
+                        /**
+                         * Log user logging as Audit entry
+                         */
+                        auditingService.logAudit(
+                                new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Anomaly Detection",
+                                        ("activated".equalsIgnoreCase(nowStatus) ? OperationEnum.ACTIVATED.toString() : OperationEnum.DEACTIVATED.toString()),
+//                                        httpSession.getAttribute("user_name") == null ? "User" : httpSession.getAttribute("user_name").toString()
+                                        getLoggedUser(token)
+                                        , "Scheduled Tasks: scheduled task (" + dto.getName() + ") " + nowStatus
+                                ));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                /**
+                 * End of auditing
+                 */
+
+            }
+
+
+            if (status == 1) {
+                if (!wfNamesAlreadyActivated.isEmpty() && wfNamesHasBeenActivated.isEmpty()) {
+                    StringBuilder namesAlreadyActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyActivated) {
+                        namesAlreadyActivated.append(s + ", ");
+                    }
+                    namesAlreadyActivated.substring(0, namesAlreadyActivated.length() - 2);
+                    throw new AbstractAirgapException("Scheduled task(s) (" + namesAlreadyActivated + ") already activated!");
+                } else if (!wfNamesAlreadyActivated.isEmpty() && !wfNamesHasBeenActivated.isEmpty()) {
+                    StringBuilder namesAlreadyActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyActivated) {
+                        namesAlreadyActivated.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenActivated) {
+                        nameshasBeenActivated.append(s + ", ");
+                    }
+                    namesAlreadyActivated.substring(0, namesAlreadyActivated.length() - 2);
+                    nameshasBeenActivated.substring(0, nameshasBeenActivated.length() - 2);
+                    throw new AbstractWarningException("Scheduled task(s) (" + namesAlreadyActivated + ") already activated, Scheduled task(s) (" + nameshasBeenActivated + ") activated successfully!");
+                }
+            } else if (status == 0) {
+
+                if (!wfNamesAlreadyDeactivated.isEmpty() && wfNamesHasBeenDeActivated.isEmpty() && wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    throw new AbstractAirgapException("Scheduled task(s) (" + namesAlreadyDeActivated + ") already deactivated!");
+                } else if (!wfNamesAlreadyDeactivated.isEmpty() && !wfNamesHasBeenDeActivated.isEmpty() && wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenDeActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenDeActivated) {
+                        nameshasBeenDeActivated.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    nameshasBeenDeActivated.substring(0, nameshasBeenDeActivated.length() - 2);
+                    throw new AbstractWarningException("Scheduled task(s) (" + namesAlreadyDeActivated + ") already deactivated, Scheduled task(s) (" + nameshasBeenDeActivated + ") deactivated successfully!");
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @Override
+    public List<AdScheduledTaskDto> listAllByActive() {
+        List<AdScheduledTaskDto> dtos = null;
+        try {
+            Iterable<AdScheduledTask> all = this.repository.findAllByActive(1);
+            if (null != all) {
+                dtos = new ArrayList<>();
+                for (AdScheduledTask entity : all) {
+                    AdScheduledTaskDto dto = entity.toDto();
+                    if (entity.getServer() != null) {
+                        boolean proceed = false;
+                        for (int i = 0; i < 10; i++) {
+                            try {
+                                dto.setBackupServer(backupServerFeignClient.findServerById(dto.getServer()).getName());
+                                proceed = true;
+                                break;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if (!proceed)
+                            throw new AbstractAirgapException("Can't get server name!");
+                    }
+                    dtos.add(dto);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+    @Override
+    public Integer checkWorkflowUsage(Integer workflowId) {
+        try {
+            return repository.checkWorkflowScheduleTaskUsages(workflowId);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    private ByteArrayInputStream getInputStreamFromFilePath(Integer id) throws IOException {
+        AdScheduledTaskDto byId = findById(id);
+        try {
+            //Do something with os
+//            File file = new File();
+//            byte[] bytes = new byte[(int) file.length()];
+            byte[] bytes = Files.readAllBytes(Paths.get(byId.getSshScriptFilePath()));
+//            byte[] bytes = FileUtils.readFileToByteArray(file);
+            return new ByteArrayInputStream(bytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    private void orderNo(List<AdScheduledTaskDto> list, int pageNumber, int itemsPerPage) {
+        try {
+            int orderNo = 1;
+            if (list != null) {
+                if (pageNumber == 0) {
+                    for (AdScheduledTaskDto dto : list) {
+                        dto.setOrderNo(orderNo);
+                        orderNo++;
+                    }
+                } else {
+                    orderNo = pageNumber * itemsPerPage + 1;
+                    for (AdScheduledTaskDto dto : list) {
+                        dto.setOrderNo(orderNo);
+                        orderNo++;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

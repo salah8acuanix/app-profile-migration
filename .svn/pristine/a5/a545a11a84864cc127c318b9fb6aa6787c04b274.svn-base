@@ -1,0 +1,52 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryApiCall;
+import com.airgap.approfiling.model.RecoveryApiOption;
+import com.airgap.approfiling.model.RecoveryTemplateParam;
+
+import lombok.Data;
+
+import java.util.Date;
+
+/**
+ * @author : Attia saeed
+ */
+
+@Data
+public class RecoveryApiOptionDto {
+
+    private String createdBy;
+    private Date createdOn;
+    private Integer id;
+    private String modifiedBy;
+    private Date modifiedOn;
+    private Integer option;
+    private String value;
+    private Integer recoveryApiCallDto;
+
+    public RecoveryApiOptionDto() {}
+
+    public RecoveryApiOption toEntity() {
+
+
+        RecoveryApiOption entity = new RecoveryApiOption();
+        if (getId() != null)
+            entity.setId(getId());
+        if (getCreatedBy() != null)
+            entity.setCreatedBy(getCreatedBy());
+        if (getCreatedOn() != null)
+            entity.setCreatedOn(getCreatedOn());
+        if (getModifiedBy() != null)
+            entity.setModifiedBy(getModifiedBy());
+        if (getModifiedOn() != null)
+            entity.setModifiedOn(getModifiedOn());
+        if (getOption() != null)
+            entity.setRecoveryTemplateParam(new RecoveryTemplateParam(getOption()));
+        if (getRecoveryApiCallDto() != null)
+            entity.setRecoveryApiCall(new RecoveryApiCall(getId()));
+        if (getValue() != null)
+            entity.setValue(getValue());
+
+        return entity;
+    }
+}

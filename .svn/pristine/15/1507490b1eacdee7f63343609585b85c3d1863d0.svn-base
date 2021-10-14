@@ -1,0 +1,637 @@
+package com.airgap.approfiling.service;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import javax.servlet.http.HttpSession;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryImportJobRepository;
+import com.airgap.approfiling.feignClients.AuditingFeignClient;
+import com.airgap.approfiling.feignClients.BackupServerFeignClient;
+import com.airgap.approfiling.feignClients.ClientsImportFeignClient;
+import com.airgap.approfiling.feignClients.UserFeignClient;
+import com.airgap.approfiling.model.RecoveryImportJob;
+import com.airgap.common.dto.AuditLogsDto;
+import com.airgap.common.dto.BackupServerDto;
+import com.airgap.common.dto.MicroservicesNamesEnum;
+import com.airgap.common.dto.OperationEnum;
+import com.airgap.common.dto.RecoveryImportJobDto;
+import com.airgap.common.encoding.Encoding;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.error.AbstractWarningException;
+
+@Service
+public class RecoveryImportJobServiceImpl implements IRecoveryImportJobService {
+
+
+    @Autowired
+    private RecoveryImportJobRepository repository;
+
+    @Autowired
+    BackupServerFeignClient backupServerFeignClient;
+    
+    @Autowired
+    private UserFeignClient userFeignClient;
+
+    @Override
+    public List<RecoveryImportJobDto> listAll() {
+        List<RecoveryImportJobDto> dtos = null;
+        try{
+            List<RecoveryImportJob> all =  this.repository.findAllByTest(0);
+            if(null != all && !all.isEmpty()){
+                dtos = new ArrayList<>();
+                for(RecoveryImportJob entity: all){
+                    RecoveryImportJobDto dto = entity.toDto();
+                    // getSiteName
+                    if(entity.getSite()!= null){
+                        boolean proceed = false;
+                        for(int i=0; i<10;i++){
+                            try {
+                                dto.setSiteName(backupServerFeignClient.findSiteById(dto.getSite()).getName());
+                                proceed = true;
+                                break;
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+                        if(!proceed)
+                            throw new AbstractAirgapException("Can't get site name!");
+                    }
+                    // get backup server name
+                    if(entity.getBackupServer()!= null){
+                        boolean proceed = false;
+                        for(int i=0; i<10;i++){
+                            try {
+                                dto.setServerName(backupServerFeignClient.findServerById(dto.getBackupServer()).getName());
+                                proceed = true;
+                                break;
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+                        if(!proceed)
+                            throw new AbstractAirgapException("Can't get backup server name!");
+                    }
+                    dtos.add(dto);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+    @Override
+    public boolean deleteAll(List<RecoveryImportJobDto> dtos) {
+        StringBuilder deletedSwiteched = new StringBuilder("");
+        StringBuilder noneDeletedSwitches = new StringBuilder("");
+        boolean deleted = false;
+        boolean noneDeleted = false;
+        try {
+            if (!dtos.isEmpty() && dtos != null) {
+                for (RecoveryImportJobDto dto : dtos) {
+                    if(!(dto.getStatus() == 3 || dto.getStatus() == 6)){
+                        noneDeletedSwitches.append(dto.getServerName() + ", ");
+                        noneDeleted = true;
+                    }else {
+                        deletedSwiteched.append(dto.getServerName() + ", ");
+                        deleted = true;
+                        repository.deleteById(dto.getId());
+                    }
+                }
+            }
+            String deletedNames = "";
+            String noneDeletedNames = "";
+
+            if (noneDeletedSwitches.length() > 2)
+                noneDeletedNames = noneDeletedSwitches.substring(0, noneDeletedSwitches.length() - 2);
+            if (deletedSwiteched.length() > 2)
+                deletedNames = deletedSwiteched.substring(0, deletedSwiteched.length() - 2);
+            if (noneDeleted && deleted) {
+                throw new AbstractWarningException("Cannot delete running backup server(s) (" + noneDeletedNames + ") import job!"
+                        + "backup server(s) (" + deletedNames + ") import job(s) deleted successfully!");
+            }
+            if (noneDeleted && !deleted) {
+                throw new AbstractAirgapException("Cannot delete running backup server(s) (" + noneDeletedNames + ") import job!");
+            }
+
+
+            try {
+                /**
+                 * Log user logging as Audit entry
+                 */
+                auditingService.logAudit(
+                        new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Recovery Profiles",
+                                OperationEnum.DELETE.toString(), httpSession.getAttribute("user_name").toString() == null ? "User": httpSession.getAttribute("user_name").toString(), "Recovery Import Job Settings: Backup Server(s) (" + deletedNames + ") recovery import job(s) is/are deleted"
+                        ));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+
+
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public List<RecoveryImportJobDto> listAllByActive() {
+        List<RecoveryImportJobDto> dtos = null;
+        try{
+            Iterable<RecoveryImportJob> all =  this.repository.findAllByActive(1);
+            if(null != all){
+                dtos = new ArrayList<>();
+                for(RecoveryImportJob entity: all){
+                    RecoveryImportJobDto dto = entity.toDto();
+                    if(entity.getSite()!= null){
+                        boolean proceed = false;
+                        for(int i=0; i<10;i++){
+                            try {
+                                dto.setSiteName(backupServerFeignClient.findSiteById(dto.getSite()).getName());
+                                dto.setServerName(backupServerFeignClient.findServerById(dto.getBackupServer()).getName());
+                                proceed = true;
+                                break;
+                            }catch (Exception e){
+                                e.printStackTrace();
+                            }
+                        }
+                        if(!proceed)
+                            throw new AbstractAirgapException("Can't get site name!");
+                    }
+                    dtos.add(dto);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+
+    @Autowired
+    ClientsImportFeignClient clientsImportFeignClient;
+
+
+    @Override
+    public void run(RecoveryImportJobDto byId) {
+        try {
+            if(byId.getSite()!= null){
+                boolean proceed = false;
+                for(int i=0; i<10;i++){
+                    try {
+                        byId.setSiteName(backupServerFeignClient.findSiteById(byId.getSite()).getName());
+                        proceed = true;
+                        break;
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+                if(!proceed)
+                    throw new AbstractAirgapException("Can't get site name!");
+            }
+            // get backup server name
+            if(byId.getBackupServer()!= null){
+                boolean proceed = false;
+                for(int i=0; i<10;i++){
+                    try {
+                        byId.setServerName(backupServerFeignClient.findServerById(byId.getBackupServer()).getName());
+                        proceed = true;
+                        break;
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+                if(!proceed)
+                    throw new AbstractAirgapException("Can't get backup server name!");
+            }
+            if(null != clientsImportFeignClient){
+                byId.setDataScienceStrategy("CLASSIFY");
+                byId.setStatus(1);
+                byId.setImportMetadata(false);
+                clientsImportFeignClient.importclientsAndBackups(byId);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean updateRecoveryImportJobStatus(Integer planId, Integer status) {
+        try {
+            this.repository.updateRecoveryImportJobStatus(planId,status);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RecoveryImportJobDto findRecoveryImportJobByServerId(Integer serverId, Integer test) {
+        RecoveryImportJob clientImportPlan = null;
+        try {
+            Optional<RecoveryImportJob> entity = this.repository.findByBackupServerAndTest(serverId,test);
+            if(!entity.isEmpty()){
+                clientImportPlan = entity.get();
+                if(clientImportPlan != null)
+                    return clientImportPlan.toDto();
+            }
+
+        }catch (Exception e){
+            e.printStackTrace();
+            throw  new AbstractAirgapException(e.getMessage());
+        }
+        return null;
+    }
+
+    @Override
+    public boolean activateOrDeactivate(List<RecoveryImportJobDto> dtos, Integer status) {
+        try {
+            List<String> wfNamesAlreadyActivated = null;
+            List<String> wfNamesHasBeenActivated = null;
+            List<String> wfNamesAlreadyDeactivated = null;
+            List<String> wfNamesHasBeenDeActivated = null;
+            List<String> wfNamesAlreadyRunning = null;
+            boolean proceed = true;
+            if (dtos != null && !dtos.isEmpty()) {
+                wfNamesAlreadyActivated = new ArrayList<>();
+                wfNamesHasBeenActivated = new ArrayList<>();
+                wfNamesAlreadyDeactivated = new ArrayList<>();
+                wfNamesHasBeenDeActivated = new ArrayList<>();
+                wfNamesAlreadyRunning = new ArrayList<>();
+                for (RecoveryImportJobDto dto : dtos) {
+                    RecoveryImportJob wf = repository.findById(dto.getId()).get();
+                    if (status == 1) {
+                        if (wf.getActive() != null && wf.getActive() == 1) {
+                            wfNamesAlreadyActivated.add(dto.getServerName());
+                        } else {
+                            wfNamesHasBeenActivated.add(dto.getServerName());
+                            repository.activateOrDeactivate(wf.getId(), status);
+                        }
+                    } else {
+                        if (wf.getStatus().equals(1) || wf.getStatus().equals(7) || dto.getStatus() == 2 || dto.getStatus() == 5 || dto.getStatus() == 8) {
+                            wfNamesAlreadyRunning.add(dto.getServerName());
+                        } else if (wf.getActive() != null && wf.getActive() == 0) {
+                            wfNamesAlreadyDeactivated.add(dto.getServerName());
+                        } else {
+                            wfNamesHasBeenDeActivated.add(dto.getServerName());
+                            repository.activateOrDeactivate(wf.getId(), status);
+                        }
+                    }
+                    String nowStatus = "activated";
+                    if (status == 0) nowStatus = "deactivated";
+
+                    String serverName = "";
+                    BackupServerDto serverById = backupServerFeignClient.findServerById(dto.getBackupServer());
+                    if(null != serverById){
+                        serverName = serverById.getName();
+                    }
+
+                    try {
+                        /**
+                         * Log user logging as Audit entry
+                         */
+                        auditingService.logAudit(
+                                new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Recovery Profiles",
+                                        ("activated".equalsIgnoreCase(nowStatus) ? OperationEnum.ACTIVATED.toString() : OperationEnum.DEACTIVATED.toString()),
+                                        httpSession.getAttribute("user_name").toString() == null ? "User":  httpSession.getAttribute("user_name").toString(), "Recovery Import Job Settings: Backup Server (" + serverName + ") recovery import job " + nowStatus
+                                ));
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+                /**
+                 * End of auditing
+                 */
+
+            }
+
+
+            if (status == 1) {
+                if (!wfNamesAlreadyActivated.isEmpty() && wfNamesHasBeenActivated.isEmpty()) {
+                    StringBuilder namesAlreadyActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyActivated) {
+                        namesAlreadyActivated.append(s + ", ");
+                    }
+                    namesAlreadyActivated.substring(0, namesAlreadyActivated.length() - 2);
+                    throw new AbstractAirgapException("Backup Server(s) (" + namesAlreadyActivated + ") plan(s) already activated!");
+                } else if (!wfNamesAlreadyActivated.isEmpty() && !wfNamesHasBeenActivated.isEmpty()) {
+                    StringBuilder namesAlreadyActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyActivated) {
+                        namesAlreadyActivated.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenActivated) {
+                        nameshasBeenActivated.append(s + ", ");
+                    }
+                    namesAlreadyActivated.substring(0, namesAlreadyActivated.length() - 2);
+                    nameshasBeenActivated.substring(0, nameshasBeenActivated.length() - 2);
+                    throw new AbstractWarningException("Backup Server(s) (" + namesAlreadyActivated + ") Plan(s) already activated, Backup Server(s) (" + nameshasBeenActivated + ") Plan(s) activated successfully!");
+                }
+            } else if (status == 0) {
+
+                if (!wfNamesAlreadyDeactivated.isEmpty() && wfNamesHasBeenDeActivated.isEmpty() && wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    throw new AbstractAirgapException("Backup Server(s) (" + namesAlreadyDeActivated + ") Plan(s) already deactivated!");
+                }  else if (!wfNamesAlreadyDeactivated.isEmpty() && wfNamesHasBeenDeActivated.isEmpty() && !wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    StringBuilder alreadyRunning = new StringBuilder("");
+                    for (String s : wfNamesAlreadyRunning) {
+                        alreadyRunning.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    alreadyRunning.substring(0, alreadyRunning.length() - 2);
+                    throw new AbstractAirgapException("Backup Server(s) (" + namesAlreadyDeActivated + ") plan(s) already deactivated!, cannot deactivate already running backup server(s) (" + alreadyRunning + ") plan(s)");
+                } else if (!wfNamesAlreadyDeactivated.isEmpty() && !wfNamesHasBeenDeActivated.isEmpty() && !wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenDeActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenDeActivated) {
+                        nameshasBeenDeActivated.append(s + ", ");
+                    }
+                    StringBuilder alreadyRunning = new StringBuilder("");
+                    for (String s : wfNamesAlreadyRunning) {
+                        alreadyRunning.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    nameshasBeenDeActivated.substring(0, nameshasBeenDeActivated.length() - 2);
+                    alreadyRunning.substring(0, alreadyRunning.length() - 2);
+                    throw new AbstractWarningException("Backup Server(s) (" + namesAlreadyDeActivated + ") already deactivated, and backup server(s) (" + nameshasBeenDeActivated + ") plan(s) deactivated successfully!, cannot deactivate already running backup server(s) (" + alreadyRunning + ") plan(s)");
+                }else if (!wfNamesAlreadyDeactivated.isEmpty() && !wfNamesHasBeenDeActivated.isEmpty() && wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder namesAlreadyDeActivated = new StringBuilder("");
+                    for (String s : wfNamesAlreadyDeactivated) {
+                        namesAlreadyDeActivated.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenDeActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenDeActivated) {
+                        nameshasBeenDeActivated.append(s + ", ");
+                    }
+                    namesAlreadyDeActivated.substring(0, namesAlreadyDeActivated.length() - 2);
+                    nameshasBeenDeActivated.substring(0, nameshasBeenDeActivated.length() - 2);
+                    throw new AbstractWarningException("Backup Server(s) (" + namesAlreadyDeActivated + ") Plan(s) already deactivated, Backup Server(s) (" + nameshasBeenDeActivated + ") Plan(s) deactivated successfully!");
+                }else if (wfNamesAlreadyDeactivated.isEmpty() && wfNamesHasBeenDeActivated.isEmpty() && !wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder alreadyRunning = new StringBuilder("");
+                    for (String s : wfNamesAlreadyRunning) {
+                        alreadyRunning.append(s + ", ");
+                    }
+                    alreadyRunning.substring(0, alreadyRunning.length() - 2);
+
+                    throw new AbstractWarningException("Cannot deactivate running backup server(s) (" + alreadyRunning + ") plan(s)!");
+                } else if (wfNamesAlreadyDeactivated.isEmpty() && !wfNamesHasBeenDeActivated.isEmpty() && !wfNamesAlreadyRunning.isEmpty()) {
+                    StringBuilder alreadyRunning = new StringBuilder("");
+                    for (String s : wfNamesAlreadyRunning) {
+                        alreadyRunning.append(s + ", ");
+                    }
+                    StringBuilder nameshasBeenDeActivated = new StringBuilder("");
+                    for (String s : wfNamesHasBeenDeActivated) {
+                        nameshasBeenDeActivated.append(s + ", ");
+                    }
+                    alreadyRunning.substring(0, alreadyRunning.length() - 2);
+                    nameshasBeenDeActivated.substring(0, nameshasBeenDeActivated.length() - 2);
+                    throw new AbstractWarningException("Backup Server(s) (" + nameshasBeenDeActivated + ") plan(s) deactivated successfully, cannot deactivate running backup server(s) (" + alreadyRunning + ") plan(s)!");
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
+        }
+    }
+
+    @Override
+    public boolean deleteByBackupServer(Integer serverId) {
+        try {
+            Optional<RecoveryImportJob> byBackupServer = repository.findByBackupServer(serverId);
+            if (!byBackupServer.isEmpty()) {
+                RecoveryImportJob clientImportPlan = byBackupServer.get();
+                if(clientImportPlan!= null){
+                    if(clientImportPlan.getStatus().equals(1) || clientImportPlan.getStatus().equals(7)
+                            || clientImportPlan.getStatus().equals(2) || clientImportPlan.getStatus().equals(5)
+                            || clientImportPlan.getStatus().equals(8)){
+                        throw new AbstractAirgapException("Cannot delete the backup server because it's running in an import plan!");
+                    }
+                    repository.delete(clientImportPlan);
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    public List<RecoveryImportJobDto> recoveryImportJobByScheduledTaskAndScheduledTaskEnabled(Integer sceduledTaskId) {
+        List<RecoveryImportJobDto> clientImportPlans = null;
+        try {
+            List<RecoveryImportJob> all = this.repository.findAllByScheduledTask(sceduledTaskId);
+            if(null != all && !all.isEmpty()){
+                clientImportPlans = new ArrayList<>();
+                for(RecoveryImportJob clientImportPlan: all){
+                    if(clientImportPlan.getScheduleType().equals(2)){ // 2 means after scheduled task
+                        clientImportPlans.add(clientImportPlan.toDto());
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw  new AbstractAirgapException(e.getMessage());
+        }
+        return clientImportPlans;
+    }
+
+    @Override
+    public boolean updateRecoveryImportJobTrainStatus(Integer planId, Boolean trained) {
+        try {
+            if(trained)
+                this.repository.updateRecoveryImportJobTrained(planId,1);
+            else
+                this.repository.updateRecoveryImportJobTrained(planId,0);
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Autowired
+    private HttpSession httpSession;
+
+    @Autowired
+    private AuditingFeignClient auditingService;
+
+
+    @Override
+    public RecoveryImportJobDto save(RecoveryImportJobDto dto) {
+        try {
+
+            RecoveryImportJob entity = new RecoveryImportJob();
+            if(dto.getId()!= null){
+
+                // check if plan is running right now
+                RecoveryImportJobDto byId = findById(dto.getId());
+                if(null!= byId){
+                    if(byId.getStatus().equals(1) || byId.getStatus().equals(7) ||
+                            byId.getStatus().equals(2) || byId.getStatus().equals(5)||
+                            byId.getStatus().equals(8)){
+                        throw new AbstractAirgapException("Cannot edit this plan while it's running");
+                    }
+                }
+
+                entity.setId(dto.getId());
+                try{
+                    entity.setModifiedBy(httpSession.getAttribute("user_name").toString());
+                }catch (Exception e){
+                    e.printStackTrace();
+                }
+                entity.setCreatedBy(dto.getCreatedBy());
+                entity.setModifiedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+                entity.setCreatedOn(dto.getCreatedOn());
+            }else {
+                try{
+                    entity.setCreatedBy(httpSession.getAttribute("user_name").toString());
+                }catch (Exception e){}
+                entity.setCreatedOn(new Date(Calendar.getInstance().getTimeInMillis()));
+            }
+            if(dto.getBackupServer()!= null)
+                entity.setBackupServer(dto.getBackupServer());
+            if(dto.getCreatedBy()!= null)
+                entity.setCreatedBy(dto.getCreatedBy());
+            if(dto.getCreatedOn()!= null)
+                entity.setCreatedOn(dto.getCreatedOn());
+            if(dto.getImportLocation()!= null)
+                entity.setImportLocation(dto.getImportLocation());
+            if(dto.getPassword()!= null)
+                entity.setPassword(Encoding.encode(dto.getPassword()));
+            if(dto.getScheduleType()!= null)
+                entity.setScheduleType(dto.getScheduleType());
+            if(dto.getSite()!= null)
+                entity.setSite(dto.getSite());
+            if(dto.getStatus()!= null)
+                entity.setStatus(dto.getStatus());
+            else
+                entity.setStatus(3);
+            if(dto.getActive()!= null)
+                entity.setStatus(dto.getStatus());
+            else
+                entity.setActive(1);
+            if(dto.getUsername()!= null)
+                entity.setUsername(dto.getUsername());
+            if(dto.getModifiedBy()!= null)
+                entity.setModifiedBy(dto.getModifiedBy());
+            if(dto.getModifiedOn()!= null)
+                entity.setModifiedOn(dto.getModifiedOn());
+            if(dto.getSentAt()!= null)
+                entity.setSentAt(dto.getSentAt());
+            if(dto.getActive()!= null)
+                entity.setActive(dto.getActive());
+            if(dto.getScheduledTask()!= null)
+                entity.setScheduledTask(dto.getScheduledTask());
+            if(dto.getRunDay()!= null)
+                entity.setRunDay(dto.getRunDay());
+            if(dto.getRuntime()!= null)
+                entity.setRuntime(dto.getRuntime());
+            if(dto.getImportMetadata()!= null){
+                if(dto.getImportMetadata())
+                    entity.setImportMetadata(1);
+                else
+                    entity.setImportMetadata(0);
+            } else
+                entity.setImportMetadata(0);
+            if(dto.getTrained()!= null){
+                if(dto.getTrained())
+                    entity.setTrained(1);
+                else
+                    entity.setTrained(0);
+            }else{
+                entity.setTrained(0);
+            }
+            if(dto.getAirgapWorkflow()!= null)
+                entity.setAirgapWorkflow(dto.getAirgapWorkflow());
+            if(dto.getTest()!= null)
+                entity.setTest(dto.getTest());
+            if(dto.getTestPath()!= null)
+                entity.setTestPath(dto.getTestPath());
+            if(dto.getPort()!= null)
+                entity.setPort(dto.getPort());
+            RecoveryImportJob save = repository.save(entity);
+            String serverName = "";
+            BackupServerDto serverById = backupServerFeignClient.findServerById(save.getBackupServer());
+            if(serverById != null){
+                serverName = serverById.getName();
+            }
+
+            // start audit log
+                try {
+                    /**
+                     * Log user logging as Audit entry
+                     */
+                    auditingService.logAudit(
+                            new AuditLogsDto(new Date(), MicroservicesNamesEnum.ANOMALY_DETECTION.toString(), "Configurations - Recovery Profiles",
+                                    dto.getId()!= null?	OperationEnum.UPDATE.toString():OperationEnum.ADD.toString(), httpSession.getAttribute("user_name").toString() == null ? "User": httpSession.getAttribute("user_name").toString(), "Recovery Import Job Settings: Backup Server (" + serverName + ") recovery import job saved"
+                            ));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            // end audit log
+
+         return save.toDto();
+        }catch (Exception e) {
+            e.printStackTrace();
+            if (e.getMessage().contains("backup_server_UNIQUE")) {
+                throw new AbstractAirgapException("Backup server is unique per plan!");
+            } else if (e.getMessage().contains("[import_location_UNIQUE]"))
+                throw new AbstractAirgapException("Path is unique per plan!");
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(int id) {
+        try {
+            this.repository.deleteById(id);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return true;
+    }
+
+    @Override
+    public RecoveryImportJobDto findById(Integer id) {
+        RecoveryImportJob clientImportPlan = null;
+        try {
+            Optional<RecoveryImportJob> entity = this.repository.findById(id);
+            clientImportPlan = entity.get();
+            return clientImportPlan.toDto();
+        }catch (Exception e){
+            e.printStackTrace();
+            throw  new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+
+
+
+
+}

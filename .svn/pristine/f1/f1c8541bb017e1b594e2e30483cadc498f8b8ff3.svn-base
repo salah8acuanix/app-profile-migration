@@ -1,0 +1,285 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.dto.AdScheduledTaskDto;
+import com.airgap.approfiling.feignClients.BackupServerFeignClient;
+import com.airgap.approfiling.feignClients.ScheduledBackupServerFeignClient;
+import com.airgap.approfiling.service.*;
+import com.airgap.common.dto.*;
+
+import com.airgap.common.util.DateUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+
+@Service
+@EnableTransactionManagement
+public class Scheduler {
+
+    @Autowired
+    IAdScheduledTaskService service;
+
+
+    @Autowired
+    IClientImportPlanService clientImportPlanService;
+
+    @Autowired
+    IMetadataImportPlanService iMetadataImportPlanService;
+
+    @Autowired
+    private ScheduledBackupServerFeignClient backupServerFeignClient;
+
+
+
+//
+//    @Scheduled(fixedDelay = 45*1000)
+//    public void importingSchedular(){
+//        try {
+//            LicenseInfoDto licnseInfo = backupServerFeignClient.getLicnseInfo();
+//            if(null != licnseInfo){
+//                if(licnseInfo.isRpEnabled()){
+//                    List<ClientImportPlanDto> allClientImportPlans = null;
+//                    if(clientImportPlanService != null) {
+//                        allClientImportPlans = clientImportPlanService.listAllByActive();
+//                    }
+//                    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+//                    String wfTimeStr = null, nowTimeStr = null;
+//
+//                    if(allClientImportPlans != null && !allClientImportPlans.isEmpty() ) {
+//                        //loop over all existing reports
+//                        for (final ClientImportPlanDto plan : allClientImportPlans) {
+//                            Date dateNow = DateUtil.datePlusCurrentZoneOffset(Calendar.getInstance().getTime());
+//                            Calendar c = Calendar.getInstance();
+//                            c.set(Calendar.DATE, 2);
+//                            c.set(Calendar.HOUR_OF_DAY, plan.getSentAt());
+//                            c.set(Calendar.MINUTE, 0);
+//                            c.set(Calendar.SECOND, 0);
+//                            c.set(Calendar.MILLISECOND, 0);
+//                            if(plan.getSentAt()!= null){
+//                                Date time = new Date(c.getTimeInMillis());
+//                                wfTimeStr  = sdf.format(DateUtil.datePlusCurrentZoneOffset(time)).toString();
+//                                nowTimeStr  = sdf.format(dateNow).toString();
+//                                if (nowTimeStr.equals(wfTimeStr) && plan.getScheduleType() == 0) { // daily
+//                                    new Thread(
+//                                            ()->{
+//                                                clientImportPlanService.run(clientImportPlanService.findById(plan.getId()));
+//                                            }
+//                                    ).start();
+//                                }
+//                            }
+//                        }
+//
+//                    }
+//                }
+//            }
+//        }catch(Exception e){
+//            e.printStackTrace();
+//        }
+//    }
+
+
+
+    @Autowired
+    private IMetadataImportJobSettingService iMetadataImportJobSettingService;
+
+    @Scheduled(fixedDelay = 45*1000)
+    public void importMetadata(){
+        try {
+            LicenseInfoDto licnseInfo = backupServerFeignClient.getLicnseInfo();
+            if(!licnseInfo.isPocLicense()){
+                if(null != licnseInfo){
+                    if(licnseInfo.isAdEnabled()){
+                        List<MetadataImportJobSettingDto> allMetadataFiles = null;
+                        if(iMetadataImportJobSettingService != null) {
+                            allMetadataFiles = iMetadataImportJobSettingService.listAllByActive();
+                        }
+                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+                        String wfTimeStr = null, nowTimeStr = null;
+
+                        if(allMetadataFiles != null && !allMetadataFiles.isEmpty() ) {
+                            //loop over all existing reports
+                            for (final MetadataImportJobSettingDto plan : allMetadataFiles) {
+                                if(plan.getScheduleType().equals(0) || plan.getScheduleType().equals(1)){
+                                    if(plan.getRuntime()!= null){
+                                        Date dateNow = DateUtil.datePlusCurrentZoneOffset(Calendar.getInstance().getTime());
+                                        Calendar c = Calendar.getInstance();
+                                        c.set(Calendar.DATE, 2);
+                                        c.set(Calendar.HOUR_OF_DAY, plan.getRuntime().getHour());
+                                        System.out.println(plan.getRuntime().getHour());
+                                        c.set(Calendar.MINUTE, plan.getRuntime().getMinute());
+                                        System.out.println(plan.getRuntime().getMinute());
+                                        c.set(Calendar.SECOND, 0);
+                                        c.set(Calendar.MILLISECOND, 0);
+                                        if(plan.getRuntime()!= null){
+                                            Date time = new Date(c.getTimeInMillis());
+                                            wfTimeStr  = sdf.format(DateUtil.datePlusCurrentZoneOffset(time)).toString();
+                                            nowTimeStr  = sdf.format(dateNow).toString();
+                                            if (nowTimeStr.equals(wfTimeStr) &&
+                                                    (plan.getScheduleType().toString().equalsIgnoreCase("0")  //daily scheduled
+                                                            || isTodayScheduledForWorkflow(plan.getScheduleType().toString(),plan.getRunDay().toString()))) { // daily
+                                                if(plan.getTrained())
+                                                    new Thread(
+                                                            ()->{
+                                                                iMetadataImportJobSettingService.run(iMetadataImportJobSettingService.findByBackupServer(plan.getBackupServer()));
+                                                            }
+                                                    ).start();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+    @Autowired
+    private IRecoveryImportJobService iRecoveryImportJobService;
+
+
+
+    @Scheduled(fixedDelay = 45*1000)
+    public void importClientsAndBackups(){
+        try {
+            LicenseInfoDto licnseInfo = backupServerFeignClient.getLicnseInfo();
+            if(!licnseInfo.isPocLicense()){
+                if(null != licnseInfo){
+                    if(licnseInfo.isAdEnabled()){
+                        List<RecoveryImportJobDto> recoveryImportJobDtos = null;
+                        if(iRecoveryImportJobService != null) {
+                            recoveryImportJobDtos = iRecoveryImportJobService.listAllByActive();
+                        }
+                        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+                        String wfTimeStr = null, nowTimeStr = null;
+
+                        if(recoveryImportJobDtos != null && !recoveryImportJobDtos.isEmpty() ) {
+                            //loop over all existing reports
+                            for (final RecoveryImportJobDto plan : recoveryImportJobDtos) {
+                                if(plan.getScheduleType().equals(0) || plan.getScheduleType().equals(1)){
+                                    if(plan.getRuntime()!= null){
+                                        Date dateNow = DateUtil.datePlusCurrentZoneOffset(Calendar.getInstance().getTime());
+                                        Calendar c = Calendar.getInstance();
+                                        c.set(Calendar.DATE, 2);
+                                        if(plan.getRuntime()!= null){
+                                            c.set(Calendar.HOUR_OF_DAY, plan.getRuntime().getHour());
+                                            System.out.println(plan.getRuntime().getHour());
+                                            c.set(Calendar.MINUTE, plan.getRuntime().getMinute());
+                                            System.out.println(plan.getRuntime().getMinute());
+                                            c.set(Calendar.SECOND, 0);
+                                            c.set(Calendar.MILLISECOND, 0);
+                                            Date time = new Date(c.getTimeInMillis());
+                                            wfTimeStr  = sdf.format(DateUtil.datePlusCurrentZoneOffset(time)).toString();
+                                            nowTimeStr  = sdf.format(dateNow).toString();
+                                            if (nowTimeStr.equals(wfTimeStr) &&
+                                                    (plan.getScheduleType().toString().equalsIgnoreCase("0")  //daily scheduled
+                                                            || isTodayScheduledForWorkflow(plan.getScheduleType().toString(),plan.getRunDay().toString()))) { // daily
+                                                new Thread(
+                                                        ()->{
+                                                            iRecoveryImportJobService.run(iRecoveryImportJobService.findRecoveryImportJobByServerId(plan.getBackupServer(),0));
+                                                        }
+                                                ).start();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                    }
+                }
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+
+    @Scheduled(fixedDelay = 45*1000)
+    public void run(){
+        try {
+            LicenseInfoDto licnseInfo = backupServerFeignClient.getLicnseInfo();
+            if(!licnseInfo.isPocLicense()) {
+                List<AdScheduledTaskDto> allScheduledTasks = null;
+                if (service != null)
+                    allScheduledTasks = service.listAllByActive();
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
+                String scheduledTaskTimeStr = null, nowTimeStr = null;
+                if (allScheduledTasks != null && !allScheduledTasks.isEmpty()) {
+                    //loop over all existing flows
+                    for (final AdScheduledTaskDto scheduledTaskDto : allScheduledTasks) {
+                        Date dateNow = DateUtil.datePlusCurrentZoneOffset(Calendar.getInstance().getTime());
+                        scheduledTaskTimeStr = sdf.format(DateUtil.datePlusCurrentZoneOffset(scheduledTaskDto.getRunTime())).toString();
+                        nowTimeStr = sdf.format(dateNow).toString();
+                        if (nowTimeStr.equals(scheduledTaskTimeStr) &&
+                                (scheduledTaskDto.getRunBases().toString().equalsIgnoreCase("0")  //daily scheduled
+                                        || isTodayScheduledForWorkflow(scheduledTaskDto.getRunAs().toString(), scheduledTaskDto.getRunDay().toString()))) {
+                            new Thread(
+                                    () -> {
+                                        scheduledTaskDto.setScheduled(true);
+                                        service.run(scheduledTaskDto,"");
+                                    }
+                            ).start();
+                        }
+                    }
+                }
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+
+    private boolean isTodayScheduledForWorkflow(String schedledType, String day) {
+        try {
+            Calendar c = Calendar.getInstance();
+//            adScheduledTaskDto.getRunAs().toString(
+            c.setTime(new Date(Calendar.getInstance().getTimeInMillis()));
+            if (schedledType.equalsIgnoreCase("1")) {
+                int today = c.get(Calendar.DAY_OF_WEEK);
+                //Week day
+//                adScheduledTaskDto.getRunDay().toString()
+                switch (today) {
+                    case 1:
+                        if (!day.equalsIgnoreCase("7")) return false;
+                        else break;  //today is sunday but not scheduled to run on Sunday
+                    case 2:
+                        if (!day.equalsIgnoreCase("1")) return false;
+                        else break;
+                    case 3:
+                        if (!day.equalsIgnoreCase("2")) return false;
+                        else break;
+                    case 4:
+                        if (!day.equalsIgnoreCase("3")) return false;
+                        else break;
+                    case 5:
+                        if (!day.equalsIgnoreCase("4")) return false;
+                        else break;
+                    case 6:
+                        if (!day.equalsIgnoreCase("5")) return false;
+                        else break;
+                    case 7:
+                        if (!day.equalsIgnoreCase("6")) return false;
+                        else break;
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return true;
+    }
+}

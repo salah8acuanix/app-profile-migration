@@ -1,0 +1,89 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.service.IMetadataImportPlanService;
+import com.airgap.common.dto.ClientImportPlanDto;
+import com.airgap.common.dto.MetadataImportPlanDto;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class MetadataPlanController {
+
+    @Autowired
+    private IMetadataImportPlanService service;
+
+    @PostMapping(value = "/metadataImportPlan/save")
+    @CrossOrigin("*")
+    public MetadataImportPlanDto save(@RequestBody @Valid MetadataImportPlanDto dto) {
+        return service.save(dto);
+    }
+
+
+    @PostMapping(value = "/metadataImportPlan/{planId}/{status}")
+    @CrossOrigin("*")
+    public boolean updatePlanStatus(@PathVariable("planId") Integer planId,
+                                    @PathVariable("status") Integer status) {
+        return service.updatePlanStatus(planId, status);
+    }
+
+    @DeleteMapping(value = "/metadataImportPlan/deleteByBackupServer/{serverId}")
+    public boolean deleteByBackupServer(@PathVariable("serverId") Integer serverId) {
+        return service.deleteByBackupServer(serverId);
+    }
+
+
+    @GetMapping(value = "/metadataImportPlan/all")
+    @CrossOrigin("*")
+    public List<MetadataImportPlanDto> all() {
+        return service.listAll();
+    }
+
+
+    @GetMapping(value = "/metadataImportPlan/{id}")
+    @CrossOrigin("*")
+    public MetadataImportPlanDto findById(@PathVariable("id") Integer id) {
+        return service.findById(id);
+    }
+
+    @GetMapping(value = "/metadataImportPlanByServer/{serverId}")
+    @CrossOrigin("*")
+    public MetadataImportPlanDto findByServerId(@PathVariable("serverId") Integer serverId) {
+        return service.findByServerId(serverId);
+    }
+
+    @GetMapping(value = "/metadataImportPlanByServer/ServerIds")
+    @CrossOrigin("*")
+    public List<MetadataImportPlanDto> findAllServerIds() {
+        return service.findAllServerIdsAndStatus();
+    }
+
+    @GetMapping(value = "/getServerStatusByServerId/{serverId}")
+    @CrossOrigin("*")
+    public Integer findMetadataImportPlanByServerId( @PathVariable("serverId") Integer serverId) {
+        return service.findMetadataImportPlanByServerId(serverId);
+    }
+
+
+    @DeleteMapping(value = "/metadataImportPlan/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+    @PostMapping(value = "/metadataImportPlan/deleteAll")
+    public boolean deleteAll(@RequestBody List<MetadataImportPlanDto> dtos) {
+        return service.deleteAll(dtos);
+    }
+
+
+    @PostMapping(value = "/metadataImportPlan/activate_deactivate/All/{status}")
+    public boolean activateOrDeactivate(@RequestBody List<MetadataImportPlanDto> dtos,
+                                        @PathVariable("status") Integer status) {
+        return service.activateOrDeactivate(dtos, status);
+    }
+
+
+}

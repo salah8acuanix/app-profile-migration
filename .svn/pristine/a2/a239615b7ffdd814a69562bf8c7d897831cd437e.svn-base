@@ -1,0 +1,51 @@
+package com.airgap.approfiling.controller;
+
+import com.airgap.approfiling.dto.RecoveryTemplateParamLocalDto;
+import com.airgap.approfiling.service.IRecoveryTemplateParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@RestController
+@CrossOrigin("*")
+public class RecoveryTemplateParamController {
+
+    @Autowired
+    private IRecoveryTemplateParam service;
+
+
+
+    @PostMapping(value="/recoveryTemplateParam/save")
+    @CrossOrigin("*")
+    public RecoveryTemplateParamLocalDto save(@RequestBody @Valid RecoveryTemplateParamLocalDto dto){
+        return service.save(dto);
+    }
+
+    @PostMapping(value="/recoveryTemplateParam/saveAll")
+    @CrossOrigin("*")
+    public boolean saveAll(@RequestBody @Valid List<RecoveryTemplateParamLocalDto> dtos){
+        return service.saveAll(dtos);
+    }
+
+    @GetMapping(value="/recoveryTemplateParam/all")
+    @CrossOrigin("*")
+    public List<RecoveryTemplateParamLocalDto> all(){
+        return service.listAll();
+    }
+
+
+    @GetMapping(value="/recoveryTemplateParam/{id}")
+    @CrossOrigin("*")
+    public RecoveryTemplateParamLocalDto findById(@PathVariable("id") Integer id){
+        return service.findById(id);
+    }
+
+    @DeleteMapping(value = "/recoveryTemplateParam/delete/{id}")
+    public boolean delete(@PathVariable("id") Integer id) {
+        return service.delete(id);
+    }
+
+
+}

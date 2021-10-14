@@ -1,0 +1,175 @@
+/**
+ * Copyright (c) Acuanix Co.
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.RecoveryProfile;
+import com.airgap.approfiling.model.RecoveryProfileClientsBackups;
+import com.airgap.approfiling.model.RecoveryWorkflow;
+import com.airgap.common.dto.BaseDto;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import net.bytebuddy.description.modifier.Ownership;
+import org.bouncycastle.asn1.x500.style.RFC4519Style;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+public class RecoveryProfileDto extends BaseDto implements Serializable {
+	private static final long serialVersionUID = 1L;
+	private int backupServer;
+	private String description;
+	private String name;
+	private String owner;
+	private List<RecoveryWorkflowDto> recoveryWorkflowDtos;
+
+	public List<RecoveryWorkflowDto> getRecoveryWorkflowDtos() {
+		return recoveryWorkflowDtos;
+	}
+	@JsonIgnore
+	private String token;
+
+	public void setRecoveryWorkflowDtos(List<RecoveryWorkflowDto> recoveryWorkflowDtos) {
+		this.recoveryWorkflowDtos = recoveryWorkflowDtos;
+	}
+
+	private List<RecoveryProfileClientsBackupsDto> recoveryProfileClientsBackupsDtos;
+
+	public List<RecoveryProfileClientsBackupsDto> getRecoveryProfileClientsBackupsDtos() {
+		return recoveryProfileClientsBackupsDtos;
+	}
+
+	public void setRecoveryProfileClientsBackupsDtos(List<RecoveryProfileClientsBackupsDto> recoveryProfileClientsBackupsDtos) {
+		this.recoveryProfileClientsBackupsDtos = recoveryProfileClientsBackupsDtos;
+	}
+
+	public RecoveryProfileDto() {
+	}
+
+	public int getBackupServer() {
+		return this.backupServer;
+	}
+
+	public void setBackupServer(int backupServer) {
+		this.backupServer = backupServer;
+	}
+
+	public String getCreatedBy() {
+		return this.createdBy;
+	}
+
+	public void setCreatedBy(String createdBy) {
+		this.createdBy = createdBy;
+	}
+
+	public Date getCreatedOn() {
+		return this.createdOn;
+	}
+
+	public void setCreatedOn(Date createdOn) {
+		this.createdOn = createdOn;
+	}
+
+	public String getDescription() {
+		return this.description;
+	}
+
+	public void setDescription(String description) {
+		this.description = description;
+	}
+
+	public int getId() {
+		return this.id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getModifiedBy() {
+		return this.modifiedBy;
+	}
+
+	public void setModifiedBy(String modifiedBy) {
+		this.modifiedBy = modifiedBy;
+	}
+
+	public Date getModifiedOn() {
+		return this.modifiedOn;
+	}
+
+	public void setModifiedOn(Date modifiedOn) {
+		this.modifiedOn = modifiedOn;
+	}
+
+	public String getName() {
+		return this.name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getOwner() {
+		return this.owner;
+	}
+
+	public void setOwner(String owner) {
+		this.owner = owner;
+	}
+	public RecoveryProfile toEntity(){
+		RecoveryProfile entity = new RecoveryProfile();
+		try{
+			if(id != null)
+				entity.setId(id);
+			entity.setBackupServer(backupServer);
+			if(getCreatedBy()!= null)
+			entity.setCreatedBy(createdBy);
+			if(getCreatedOn()!= null)
+			entity.setCreatedOn(createdOn);
+			if(getModifiedBy()!= null)
+			entity.setModifiedBy(modifiedBy);
+			if(getModifiedOn()!= null)
+			entity.setCreatedOn(modifiedOn);
+			if(getDescription()!= null)
+			entity.setDescription(description);
+			if(getName()!= null)
+			entity.setName(name);
+			if(getOwner()!= null)
+			entity.setOwner(owner);
+			if(getRecoveryProfileClientsBackupsDtos()!= null){
+				List<RecoveryProfileClientsBackups> entities = new ArrayList<>();
+				for(RecoveryProfileClientsBackupsDto dto: getRecoveryProfileClientsBackupsDtos()){
+					RecoveryProfileClientsBackups recoveryProfileClientsBackups = dto.toEntity();
+					recoveryProfileClientsBackups.setProfile(entity);
+					entities.add(recoveryProfileClientsBackups);
+				}
+				entity.setRecoveryProfileClientsBackups(entities);
+			}
+			if(getRecoveryWorkflowDtos()!= null){
+				List<RecoveryWorkflow> entities = new ArrayList<>();
+				for(RecoveryWorkflowDto dto: getRecoveryWorkflowDtos()){
+					RecoveryWorkflow recoveryWorkflow = dto.toEntity();
+					recoveryWorkflow.setRecoveryProfile(entity);
+					entities.add(recoveryWorkflow);
+				}
+				entity.setRecoveryWorkflows(entities);
+			}
+			return entity;
+		}catch (Exception e){
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
+	}
+}

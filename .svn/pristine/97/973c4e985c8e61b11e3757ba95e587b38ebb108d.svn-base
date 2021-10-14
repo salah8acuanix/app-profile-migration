@@ -1,0 +1,13 @@
+package com.airgap.approfiling.dao;
+
+import com.airgap.approfiling.model.RecoveryApiCall;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
+
+/**
+ * @author :Attia Saeed
+ */
+@Repository
+public interface RecoveryApiCallRepository extends JpaRepository<RecoveryApiCall, Integer> {
+}

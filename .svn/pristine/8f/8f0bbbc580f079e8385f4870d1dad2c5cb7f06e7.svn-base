@@ -1,0 +1,16 @@
+package com.airgap.approfiling.feignClients;
+
+import com.airgap.common.dto.BackupServerDto;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+@FeignClient("airgab")
+public interface UserFeignClient {
+
+//	@GetMapping(value = "/airgab/loggedInUser")
+//	 String getLoggedInUser();
+	@GetMapping("/airgab/bserver/find_by_id/{id}")
+	 BackupServerDto findServerById(@PathVariable("id") Integer id);
+
+}

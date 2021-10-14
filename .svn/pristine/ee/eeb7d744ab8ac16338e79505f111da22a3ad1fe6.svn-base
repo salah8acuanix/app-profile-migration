@@ -1,0 +1,252 @@
+package com.airgap.approfiling.dto;
+
+import com.airgap.approfiling.model.*;
+
+import java.util.Date;
+
+/**
+ * Author: Attia Saeed
+ * 04/01/2021
+ */
+
+
+public class RecoveryWorkflowDetailsDto {
+
+
+    private Integer id;
+
+    private Integer recoveryWorkflowGroup;
+
+
+    private Integer viewOrder;
+
+
+    private Integer nodeType;
+
+    private Integer nodeId;
+
+    private Integer airgapApiCall;
+
+
+    private Integer allowMonitor;
+
+
+    private String createdBy;
+
+
+    private Date cratedOn;
+
+
+    private String modifiedBy;
+
+
+    private Date modifiedOn;
+
+
+    private Integer recoveryApiCall;
+
+
+    private Integer workflowId;
+
+
+    private Integer responseParameter;
+
+
+    private Integer responseParameterValue;
+
+
+    private Integer recoveryWorkflow;
+
+    public Integer getRecoveryWorkflowGroup() {
+        return recoveryWorkflowGroup;
+    }
+
+    public void setRecoveryWorkflowGroup(Integer recoveryWorkflowGroup) {
+        this.recoveryWorkflowGroup = recoveryWorkflowGroup;
+    }
+
+    public Integer getRecoveryWorkflow() {
+        return recoveryWorkflow;
+    }
+
+    public void setRecoveryWorkflow(Integer recoveryWorkflow) {
+        this.recoveryWorkflow = recoveryWorkflow;
+    }
+
+    public void setAllowMonitor(Integer allowMonitor) {
+        this.allowMonitor = allowMonitor;
+    }
+
+
+
+
+
+    public RecoveryWorkflowDetailsDto() {
+    }
+
+    public RecoveryWorkflowDetailsDto(Integer id) {
+        this.id = id;
+    }
+
+    public RecoveryWorkflowDetailsDto(Integer id, int recoveryWorkflowGroup, int allowMonitor) {
+        this.id = id;
+        this.recoveryWorkflowGroup = recoveryWorkflowGroup;
+        this.allowMonitor = allowMonitor;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+
+
+    public Integer getViewOrder() {
+        return viewOrder;
+    }
+
+    public void setViewOrder(Integer viewOrder) {
+        this.viewOrder = viewOrder;
+    }
+
+    public Integer getNodeType() {
+        return nodeType;
+    }
+
+    public void setNodeType(Integer nodeType) {
+        this.nodeType = nodeType;
+    }
+
+    public Integer getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(Integer nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public Integer getAirgapApiCall() {
+        return airgapApiCall;
+    }
+
+    public void setAirgapApiCall(Integer airgapApiCall) {
+        this.airgapApiCall = airgapApiCall;
+    }
+
+    public int getAllowMonitor() {
+        return allowMonitor;
+    }
+
+    public void setAllowMonitor(int allowMonitor) {
+        this.allowMonitor = allowMonitor;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public Date getCratedOn() {
+        return cratedOn;
+    }
+
+    public void setCratedOn(Date cratedOn) {
+        this.cratedOn = cratedOn;
+    }
+
+    public String getModifiedBy() {
+        return modifiedBy;
+    }
+
+    public void setModifiedBy(String modifiedBy) {
+        this.modifiedBy = modifiedBy;
+    }
+
+    public Date getModifiedOn() {
+        return modifiedOn;
+    }
+
+    public void setModifiedOn(Date modifiedOn) {
+        this.modifiedOn = modifiedOn;
+    }
+
+    public Integer getRecoveryApiCall() {
+        return recoveryApiCall;
+    }
+
+    public void setRecoveryApiCall(Integer recoveryApiCall) {
+        this.recoveryApiCall = recoveryApiCall;
+    }
+
+    public Integer getWorkflowId() {
+        return workflowId;
+    }
+
+    public void setWorkflowId(Integer workflowId) {
+        this.workflowId = workflowId;
+    }
+
+    public Integer getResponseParameter() {
+        return responseParameter;
+    }
+
+    public void setResponseParameter(Integer responseParameter) {
+        this.responseParameter = responseParameter;
+    }
+
+    public Integer getResponseParameterValue() {
+        return responseParameterValue;
+    }
+
+    public void setResponseParameterValue(Integer responseParameterValue) {
+        this.responseParameterValue = responseParameterValue;
+    }
+
+
+    public RecoveryWorkflowDetails toEntity() {
+
+
+        RecoveryWorkflowDetails entity = new RecoveryWorkflowDetails();
+
+        if (id != null)
+            entity.setId(id);
+        if (getRecoveryWorkflowGroup() != null)
+            entity.setRecoveryWorkflowGroup(new RecoveryWorkflowGroup(getRecoveryWorkflowGroup()));
+        if (viewOrder != null)
+            entity.setViewOrder(viewOrder);
+        if (nodeType != null)
+            entity.setNodeType(nodeType);
+        if (nodeId != null)
+            entity.setNodeId(nodeId);
+        if (airgapApiCall != null)
+            entity.setAirgapApiCall(airgapApiCall);
+        if (allowMonitor != null)
+            entity.setAllowMonitor(allowMonitor);
+        if (createdBy != null)
+            entity.setCreatedBy(createdBy);
+        if (cratedOn != null)
+            entity.setCratedOn(cratedOn);
+        if (modifiedBy != null)
+            entity.setModifiedBy(modifiedBy);
+        if (modifiedOn != null)
+            entity.setModifiedOn(modifiedOn);
+        if (recoveryApiCall != null)
+            entity.setRecoveryApiCall(new RecoveryApiCall(getId()));
+//        if (workflowId != null)
+//            entity.setWorkflowId(new RecoveryWorkflow(getId()));
+        if (responseParameter != null)
+            entity.setResponseParameter(new RecoveryApiResponseParam(responseParameter));
+        if (responseParameterValue != null)
+            entity.setResponseParameterValue(new RecoveryApiResponseParamsValues(responseParameterValue));
+        if(getRecoveryWorkflow()!= null)
+            entity.setRecoveryWorkflow(new RecoveryWorkflow(getRecoveryWorkflow()));
+
+        return entity;
+    }
+}

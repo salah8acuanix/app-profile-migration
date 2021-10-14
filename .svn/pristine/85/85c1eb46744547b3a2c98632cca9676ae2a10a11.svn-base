@@ -1,0 +1,161 @@
+/**
+ * Copyright (c) Acuanix Co.
+ *
+ * @Author: Sayed Taha.
+ * @Date: 18/11/2020
+ */
+package com.airgap.approfiling.service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import com.airgap.common.dao.redis.model.UserSessionParamDto;
+import com.airgap.common.dao.redis.repository.UserSessionRepo;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Service;
+
+import com.airgap.approfiling.dao.RecoveryInfrastructureRepository;
+import com.airgap.approfiling.dto.RecoveryInfrastructureDto;
+import com.airgap.approfiling.feignClients.BackupServerFeignClient;
+import com.airgap.approfiling.feignClients.UserFeignClient;
+import com.airgap.approfiling.model.RecoveryInfrastructure;
+import com.airgap.common.error.AbstractAirgapException;
+import com.airgap.common.service.BaseService;
+
+@Service
+public class RecoveryInfrastructureService extends BaseService implements IRecoveryInfrastructure {
+    @Autowired
+    BackupServerFeignClient backupServerFeignClient;
+    @Autowired
+    private RecoveryInfrastructureRepository repo;
+
+    @Autowired
+    private UserFeignClient userFeignClient;
+
+    @Autowired
+    UserSessionRepo userSessionRepo;
+    
+    @Override
+    public List<RecoveryInfrastructureDto> listAll() {
+        List<RecoveryInfrastructureDto> dtos = null;
+        try {
+            Iterable<RecoveryInfrastructure> entities = repo.findAll();
+            if (entities != null) {
+                for (RecoveryInfrastructure entity : entities) {
+                    dtos = dtos == null ? new ArrayList<>() : dtos;
+                    RecoveryInfrastructureDto recoveryInfrastructureDto = entity.toDto();
+                    if (entity.getSite() != null) {
+                        boolean proceed = false;
+                        for (int i = 0; i < 10; i++) {
+                            try {
+                                recoveryInfrastructureDto.setSiteName(backupServerFeignClient.findSiteById(recoveryInfrastructureDto.getSite()).getName());
+                                proceed = true;
+                                break;
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if (!proceed)
+                            throw new AbstractAirgapException("Can't get site name!");
+                    }
+                    dtos.add(recoveryInfrastructureDto);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dtos;
+    }
+
+    @Override
+    public List<RecoveryInfrastructureDto> findAll( int offset,int limit) {
+        List<RecoveryInfrastructureDto> dtos = null;
+        try {
+            Iterable<RecoveryInfrastructure> all = repo.findAll(PageRequest.of(offset, limit));
+            if (all != null) {
+                dtos = new ArrayList<>();
+                for (RecoveryInfrastructure entity : all) {
+                    dtos.add(entity.toDto());
+                }
+            }
+            return dtos;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RecoveryInfrastructureDto save(RecoveryInfrastructureDto dto, String token) {
+        try {
+            Optional<UserSessionParamDto> sessionUser=userSessionRepo.findById(dto.getToken());
+            if(!sessionUser.isEmpty()) {
+                dto.updateStatisticsAttributes(sessionUser.get().getName());
+                return repo.save(dto.toEntity()).toDto();
+            }
+            else return null;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean delete(RecoveryInfrastructureDto dto, String token) {
+        try {
+            repo.delete(dto.toEntity());
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean deleteById(int id, String token) {
+        try {
+            repo.deleteById(id);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean deleteAll(List<RecoveryInfrastructureDto> list,String token) {
+        try {
+            List<RecoveryInfrastructure> entities = null;
+            if (list != null && !list.isEmpty()) {
+                entities = entities == null ? new ArrayList<>() : entities;
+                for (RecoveryInfrastructureDto dto : list)
+                    entities.add(dto.toEntity());
+                repo.deleteAll(entities);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+    }
+
+    @Override
+    public RecoveryInfrastructureDto findById(Integer id) {
+        RecoveryInfrastructureDto dto = null;
+        try {
+            Optional<RecoveryInfrastructure> entity = repo.findById(id);
+            if (entity != null && entity.get() != null) {
+                return entity.get().toDto();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new AbstractAirgapException(e.getMessage());
+        }
+        return dto;
+    }
+
+}
